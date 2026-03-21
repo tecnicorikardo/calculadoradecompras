@@ -1367,15 +1367,25 @@ class _ShoppingScreenState extends State<ShoppingScreen>
     }
 
     final qty = lastGroup?.quantity ?? 1;
-    final rawDescription = lastItem?.description ?? 'Nenhum item adicionado';
+    // Trata string vazia como sem descrição
+    final rawDesc = (lastItem?.description?.trim().isEmpty ?? true)
+        ? null
+        : lastItem!.description;
+    final rawDescription = rawDesc ?? (lastItem != null ? 'Item' : 'Nenhum item adicionado');
     final description = (lastItem != null && qty > 1)
         ? '${qty}x $rawDescription'
         : rawDescription;
+    final unitFormatted = lastItem != null
+        ? CurrencyFormatters.brl.format(lastItem.value)
+        : 'R\$ 0,00';
+    final totalFormatted = lastItem != null
+        ? CurrencyFormatters.brl.format(lastItem.value * qty)
+        : 'R\$ 0,00';
     final value = lastItem == null
         ? 'R\$ 0,00'
         : qty > 1
-            ? '${qty} x ${CurrencyFormatters.brl.format(lastItem.value)} = ${CurrencyFormatters.brl.format(lastItem.value * qty)}'
-            : CurrencyFormatters.brl.format(lastItem.value);
+            ? '$qty x $unitFormatted = $totalFormatted'
+            : unitFormatted;
     final descriptionColor = lastItem == null
         ? palette.textSecondary
         : palette.textPrimary;
@@ -1442,7 +1452,7 @@ class _ShoppingScreenState extends State<ShoppingScreen>
                   child: FittedBox(
                     fit: BoxFit.scaleDown,
                     child: Text(
-                      value,
+                      qty > 1 ? totalFormatted : value,
                       textAlign: TextAlign.right,
                       style: TextStyle(
                         color: valueColor,
