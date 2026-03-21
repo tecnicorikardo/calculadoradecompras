@@ -1952,27 +1952,22 @@ class _ShoppingScreenState extends State<ShoppingScreen>
       value: overlayStyle,
       child: Scaffold(
         resizeToAvoidBottomInset: false,
-        // Banner de anúncio fixo na parte inferior (só para usuários não PRO)
-        bottomNavigationBar: ListenableBuilder(
-          listenable: PremiumController.instance,
-          builder: (context, _) {
-            if (PremiumController.instance.isPro) return const SizedBox.shrink();
-            return const AdBannerWidget();
-          },
-        ),
-        body: DecoratedBox(
-          decoration: BoxDecoration(
-            color: palette.backgroundBottom,
-            gradient: RadialGradient(
-              center: Alignment.topCenter,
-              radius: 1.15,
-              colors: <Color>[
-                palette.backgroundTop,
-                palette.backgroundMiddle,
-                palette.backgroundBottom,
-              ],
-            ),
-          ),
+        body: Column(
+          children: <Widget>[
+            Expanded(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: palette.backgroundBottom,
+                  gradient: RadialGradient(
+                    center: Alignment.topCenter,
+                    radius: 1.15,
+                    colors: <Color>[
+                      palette.backgroundTop,
+                      palette.backgroundMiddle,
+                      palette.backgroundBottom,
+                    ],
+                  ),
+                ),
           child: SafeArea(
             child: AnimatedBuilder(
               animation: _controller,
@@ -2121,6 +2116,19 @@ class _ShoppingScreenState extends State<ShoppingScreen>
               },
             ),
           ),
+        ),
+      ),
+            // Banner fixo abaixo do conteúdo, só para não-PRO
+            ListenableBuilder(
+              listenable: PremiumController.instance,
+              builder: (context, _) {
+                if (PremiumController.instance.isPro) {
+                  return const SizedBox.shrink();
+                }
+                return const AdBannerWidget();
+              },
+            ),
+          ],
         ),
       ),
     );
