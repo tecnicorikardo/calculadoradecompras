@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../controllers/premium_controller.dart';
 import '../controllers/shopping_controller.dart';
 import '../core/config/app_info.dart';
 import '../core/theme/app_palette.dart';
@@ -9,8 +10,10 @@ import '../core/utils/currency_formatters.dart';
 import '../core/utils/currency_input_parser.dart';
 import '../models/budget_status.dart';
 import '../services/local_storage_service.dart';
+import '../widgets/ad_banner_widget.dart';
 import '../widgets/items_bottom_sheet.dart';
 import '../widgets/numeric_keypad.dart';
+import '../widgets/upgrade_sheet.dart';
 
 class ShoppingScreen extends StatefulWidget {
   const ShoppingScreen({
@@ -561,6 +564,15 @@ class _ShoppingScreenState extends State<ShoppingScreen>
     }
   }
 
+  Future<void> _showUpgradeSheet() {
+    return showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => const UpgradeSheet(),
+    );
+  }
+
   Future<void> _showItemsSheet() {
     return showModalBottomSheet<void>(
       context: context,
@@ -733,6 +745,54 @@ class _ShoppingScreenState extends State<ShoppingScreen>
                             ),
                           ],
                         ),
+                      ),
+                      const SizedBox(height: 16),
+                      // Seção PRO — só aparece se não for PRO
+                      ListenableBuilder(
+                        listenable: PremiumController.instance,
+                        builder: (context, _) {
+                          if (PremiumController.instance.isPro) {
+                            return _SettingsSection(
+                              title: 'Versão PRO',
+                              child: Row(
+                                children: <Widget>[
+                                  Icon(Icons.workspace_premium_rounded,
+                                      color: palette.accent),
+                                  const SizedBox(width: 10),
+                                  Text(
+                                    'Anúncios removidos. Obrigado!',
+                                    style: theme.textTheme.bodyMedium?.copyWith(
+                                      color: palette.accent,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }
+                          return _SettingsSection(
+                            title: 'Versão PRO',
+                            child: SizedBox(
+                              width: double.infinity,
+                              child: FilledButton.icon(
+                                onPressed: () {
+                                  Navigator.of(context).pop();
+                                  _showUpgradeSheet();
+                                },
+                                icon: const Icon(Icons.workspace_premium_rounded),
+                                label: const Text('Remover anúncios por R\$ 7,99'),
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: palette.accent,
+                                  foregroundColor: palette.accentForeground,
+                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(18),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          );
+                        },
                       ),
                     ],
                   ),
@@ -1892,6 +1952,14 @@ class _ShoppingScreenState extends State<ShoppingScreen>
       value: overlayStyle,
       child: Scaffold(
         resizeToAvoidBottomInset: false,
+        // Banner de anúncio fixo na parte inferior (só para usuários não PRO)
+        bottomNavigationBar: ListenableBuilder(
+          listenable: PremiumController.instance,
+          builder: (context, _) {
+            if (PremiumController.instance.isPro) return const SizedBox.shrink();
+            return const AdBannerWidget();
+          },
+        ),
         body: DecoratedBox(
           decoration: BoxDecoration(
             color: palette.backgroundBottom,
