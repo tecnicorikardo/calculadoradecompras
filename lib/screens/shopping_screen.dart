@@ -274,8 +274,11 @@ class _ShoppingScreenState extends State<ShoppingScreen>
     }
 
     final limit = _controller.budgetLimit;
-    if (limit != null) {
+    if (limit != null && limit <= 9999999.99) {
       _budgetController.text = CurrencyFormatters.formatEditable(limit);
+    } else if (limit != null && limit > 9999999.99) {
+      // Valor corrompido no storage — limpa
+      await _controller.setBudgetLimit(null);
     }
 
     setState(() {});
@@ -405,6 +408,8 @@ class _ShoppingScreenState extends State<ShoppingScreen>
   }
 
   void _updateAmountValue(String digits) {
+    // Limita a 10 dígitos para evitar valores absurdos (máx R$ 99.999.999,99)
+    if (digits.length > 10) return;
     setState(() {
       final controller = _activeAmountController;
       if (_activeAmountField == _AmountFieldTarget.budget) {
@@ -1020,58 +1025,54 @@ class _ShoppingScreenState extends State<ShoppingScreen>
                       ? 2
                       : 4,
                 ),
-                Expanded(
-                  child: Center(
-                    child: TextField(
-                      key: const ValueKey<String>('budget-field'),
-                      controller: _budgetController,
-                      focusNode: _budgetFocusNode,
-                      keyboardType: TextInputType.none,
-                      readOnly: true,
-                      showCursor: true,
-                      maxLines: 1,
-                      onTap: _activateBudgetField,
-                      onChanged: _handleBudgetChanged,
-                      style: TextStyle(
-                        color: fieldColor,
-                        fontSize: valueFontSize,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: hasLimit ? -0.3 : -0.1,
-                        height: 1.15,
-                      ),
-                      strutStyle: StrutStyle(
-                        fontSize: valueFontSize,
-                        height: 1.15,
-                      ),
-                      textAlignVertical: TextAlignVertical.center,
-                      cursorColor: palette.accent,
-                      decoration: InputDecoration(
-                        filled: false,
-                        isCollapsed: true,
-                        border: InputBorder.none,
-                        enabledBorder: InputBorder.none,
-                        focusedBorder: InputBorder.none,
-                        disabledBorder: InputBorder.none,
-                        errorBorder: InputBorder.none,
-                        focusedErrorBorder: InputBorder.none,
-                        contentPadding: EdgeInsets.symmetric(
-                          vertical: fieldVerticalPadding,
-                        ),
-                        prefixText: 'R\$ ',
-                        prefixStyle: TextStyle(
-                          color: fieldColor,
-                          fontSize: prefixFontSize,
-                          fontWeight: FontWeight.w700,
-                          height: 1.15,
-                        ),
-                        hintText: 'Digite o limite',
-                        hintStyle: TextStyle(
-                          color: palette.textSecondary,
-                          fontSize: valueFontSize,
-                          fontWeight: FontWeight.w600,
-                          height: 1.15,
-                        ),
-                      ),
+                TextField(
+                  key: const ValueKey<String>('budget-field'),
+                  controller: _budgetController,
+                  focusNode: _budgetFocusNode,
+                  keyboardType: TextInputType.none,
+                  readOnly: true,
+                  showCursor: true,
+                  maxLines: 1,
+                  onTap: _activateBudgetField,
+                  onChanged: _handleBudgetChanged,
+                  style: TextStyle(
+                    color: fieldColor,
+                    fontSize: valueFontSize,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: hasLimit ? -0.3 : -0.1,
+                    height: 1.15,
+                  ),
+                  strutStyle: StrutStyle(
+                    fontSize: valueFontSize,
+                    height: 1.15,
+                  ),
+                  textAlignVertical: TextAlignVertical.center,
+                  cursorColor: palette.accent,
+                  decoration: InputDecoration(
+                    filled: false,
+                    isCollapsed: true,
+                    border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                    disabledBorder: InputBorder.none,
+                    errorBorder: InputBorder.none,
+                    focusedErrorBorder: InputBorder.none,
+                    contentPadding: EdgeInsets.symmetric(
+                      vertical: fieldVerticalPadding,
+                    ),
+                    prefixText: 'R\$ ',
+                    prefixStyle: TextStyle(
+                      color: fieldColor,
+                      fontSize: prefixFontSize,
+                      fontWeight: FontWeight.w700,
+                      height: 1.15,
+                    ),
+                    hintText: 'Digite o limite',
+                    hintStyle: TextStyle(
+                      color: palette.textSecondary,
+                      fontSize: valueFontSize,
+                      fontWeight: FontWeight.w600,
+                      height: 1.15,
                     ),
                   ),
                 ),
@@ -1269,13 +1270,13 @@ class _ShoppingScreenState extends State<ShoppingScreen>
         : 16.0;
     final verticalPadding = condensed
         ? tight
-              ? 8.0
-              : 10.0
+              ? 6.0
+              : 8.0
         : tight
-        ? 6.0
+        ? 4.0
         : compact
-        ? 8.0
-        : 11.0;
+        ? 6.0
+        : 8.0;
     final titleFontSize = condensed
         ? tight
               ? 11.0
@@ -1459,13 +1460,13 @@ class _ShoppingScreenState extends State<ShoppingScreen>
             : 18,
         vertical: condensed
             ? tight
-                  ? 8
-                  : 10
+                  ? 6
+                  : 8
             : tight
-            ? 10
+            ? 7
             : compact
-            ? 12
-            : 14,
+            ? 9
+            : 10,
       ),
       child: condensed
           ? Column(
@@ -1763,10 +1764,10 @@ class _ShoppingScreenState extends State<ShoppingScreen>
                         style: TextStyle(
                           color: palette.accent,
                           fontSize: tight
-                              ? 16
+                              ? 20
                               : compact
-                              ? 17
-                              : 22,
+                              ? 22
+                              : 26,
                           fontWeight: FontWeight.w900,
                           letterSpacing: -0.3,
                         ),
