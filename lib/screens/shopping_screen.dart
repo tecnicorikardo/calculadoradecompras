@@ -905,63 +905,19 @@ class _ShoppingScreenState extends State<ShoppingScreen>
     final palette = context.appPalette;
     final hasLimit = _budgetController.text.trim().isNotEmpty;
     final active = _activeAmountField == _AmountFieldTarget.budget;
-    final titleFontSize = tight
-        ? 8.5
-        : compact
-        ? 10.0
-        : 15.0;
-    final badgeFontSize = tight
-        ? 7.0
-        : compact
-        ? 8.0
-        : 11.0;
-    final valueFontSize = tight
-        ? 12.0
-        : compact
-        ? 15.0
-        : 22.0;
-    final prefixFontSize = tight
-        ? 11.0
-        : compact
-        ? 13.0
-        : 18.0;
-    final fieldVerticalPadding = tight
-        ? 1.0
-        : compact
-        ? 2.0
-        : 4.0;
-    final actionSize = tight
-        ? 30.0
-        : compact
-        ? 34.0
-        : 40.0;
+    final labelFontSize = tight ? 9.0 : compact ? 10.0 : 13.0;
+    final badgeFontSize = tight ? 7.0 : compact ? 8.0 : 10.0;
+    final valueFontSize = tight ? 16.0 : compact ? 18.0 : 22.0;
+    final actionSize = tight ? 30.0 : compact ? 34.0 : 40.0;
     final fieldColor = active || hasLimit
         ? palette.accentStrong
         : palette.textSecondary;
 
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.fromLTRB(
-        tight
-            ? 10
-            : compact
-            ? 12
-            : 18,
-        tight
-            ? 6
-            : compact
-            ? 8
-            : 10,
-        tight
-            ? 8
-            : compact
-            ? 10
-            : 14,
-        tight
-            ? 6
-            : compact
-            ? 8
-            : 10,
+      padding: EdgeInsets.symmetric(
+        horizontal: tight ? 10 : compact ? 12 : 16,
+        vertical: tight ? 4 : compact ? 6 : 8,
       ),
       decoration: _glowCardDecoration(
         compact: compact,
@@ -970,133 +926,96 @@ class _ShoppingScreenState extends State<ShoppingScreen>
         active: active,
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: <Widget>[
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: <Widget>[
-                Row(
-                  children: <Widget>[
-                    Expanded(
-                      child: Text(
-                        'Limite de Compra',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: palette.textSecondary,
-                          fontSize: titleFontSize,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                    Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: tight
-                            ? 6
-                            : compact
-                            ? 7
-                            : 10,
-                        vertical: tight
-                            ? 2
-                            : compact
-                            ? 3
-                            : 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: palette.accentSoft,
-                        borderRadius: BorderRadius.circular(99),
-                      ),
-                      child: Text(
-                        'Opcional',
-                        style: TextStyle(
-                          color: palette.accent,
-                          fontSize: badgeFontSize,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(
-                  height: tight
-                      ? 1
-                      : compact
-                      ? 2
-                      : 4,
-                ),
-                TextField(
-                  key: const ValueKey<String>('budget-field'),
-                  controller: _budgetController,
-                  focusNode: _budgetFocusNode,
-                  keyboardType: TextInputType.none,
-                  readOnly: true,
-                  showCursor: true,
-                  maxLines: 1,
-                  onTap: _activateBudgetField,
-                  onChanged: _handleBudgetChanged,
-                  style: TextStyle(
-                    color: fieldColor,
-                    fontSize: valueFontSize,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: hasLimit ? -0.3 : -0.1,
-                    height: 1.15,
-                  ),
-                  strutStyle: StrutStyle(
-                    fontSize: valueFontSize,
-                    height: 1.15,
-                  ),
-                  textAlignVertical: TextAlignVertical.center,
-                  cursorColor: palette.accent,
-                  decoration: InputDecoration(
-                    filled: false,
-                    isCollapsed: true,
-                    border: InputBorder.none,
-                    enabledBorder: InputBorder.none,
-                    focusedBorder: InputBorder.none,
-                    disabledBorder: InputBorder.none,
-                    errorBorder: InputBorder.none,
-                    focusedErrorBorder: InputBorder.none,
-                    contentPadding: EdgeInsets.symmetric(
-                      vertical: fieldVerticalPadding,
-                    ),
-                    prefixText: 'R\$ ',
-                    prefixStyle: TextStyle(
-                      color: fieldColor,
-                      fontSize: prefixFontSize,
-                      fontWeight: FontWeight.w700,
-                      height: 1.15,
-                    ),
-                    hintText: 'Digite o limite',
-                    hintStyle: TextStyle(
+          // Label + badge empilhados verticalmente à esquerda
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  Text(
+                    'Limite de Compra',
+                    style: TextStyle(
                       color: palette.textSecondary,
-                      fontSize: valueFontSize,
-                      fontWeight: FontWeight.w600,
-                      height: 1.15,
+                      fontSize: labelFontSize,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
+                  SizedBox(width: tight ? 4 : 6),
+                  Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: tight ? 5 : 7,
+                      vertical: tight ? 1 : 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: palette.accentSoft,
+                      borderRadius: BorderRadius.circular(99),
+                    ),
+                    child: Text(
+                      'Opcional',
+                      style: TextStyle(
+                        color: palette.accent,
+                        fontSize: badgeFontSize,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          SizedBox(width: tight ? 8 : 10),
+          // Campo de valor ocupa o espaço restante
+          Expanded(
+            child: TextField(
+              key: const ValueKey<String>('budget-field'),
+              controller: _budgetController,
+              focusNode: _budgetFocusNode,
+              keyboardType: TextInputType.none,
+              readOnly: true,
+              showCursor: true,
+              maxLines: 1,
+              onTap: _activateBudgetField,
+              onChanged: _handleBudgetChanged,
+              textAlign: TextAlign.right,
+              style: TextStyle(
+                color: fieldColor,
+                fontSize: valueFontSize,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.3,
+              ),
+              cursorColor: palette.accent,
+              decoration: InputDecoration(
+                filled: false,
+                isCollapsed: true,
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                disabledBorder: InputBorder.none,
+                errorBorder: InputBorder.none,
+                focusedErrorBorder: InputBorder.none,
+                contentPadding: EdgeInsets.zero,
+                hintText: 'R\$ 0,00',
+                hintStyle: TextStyle(
+                  color: palette.textSecondary,
+                  fontSize: valueFontSize,
+                  fontWeight: FontWeight.w600,
                 ),
-              ],
+              ),
             ),
           ),
-          SizedBox(
-            width: tight
-                ? 6
-                : compact
-                ? 8
-                : 10,
-          ),
+          SizedBox(width: tight ? 6 : 8),
           Tooltip(
             message: 'Aplicar limite',
             child: IconButton.filled(
               onPressed: _confirmBudgetLimit,
               icon: Icon(
                 Icons.check_rounded,
-                size: tight
-                    ? 16
-                    : compact
-                    ? 18
-                    : 20,
+                size: tight ? 16 : compact ? 18 : 20,
               ),
               style: IconButton.styleFrom(
                 backgroundColor: palette.accent,
@@ -1764,10 +1683,10 @@ class _ShoppingScreenState extends State<ShoppingScreen>
                         style: TextStyle(
                           color: palette.accent,
                           fontSize: tight
-                              ? 20
+                              ? 26
                               : compact
-                              ? 22
-                              : 26,
+                              ? 28
+                              : 32,
                           fontWeight: FontWeight.w900,
                           letterSpacing: -0.3,
                         ),
@@ -1998,10 +1917,10 @@ class _ShoppingScreenState extends State<ShoppingScreen>
                         ? 50.0
                         : 64.0;
                     final entryHeight = tight
-                        ? 52.0
+                        ? 62.0
                         : compact
-                        ? 54.0
-                        : 58.0;
+                        ? 66.0
+                        : 72.0;
                     final splitSummaryCards = compact;
                     final summaryCardsHeight = tight
                         ? 122.0
