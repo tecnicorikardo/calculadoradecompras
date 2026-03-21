@@ -32,6 +32,8 @@ class ItemsBottomSheet extends StatelessWidget {
         child: AnimatedBuilder(
           animation: controller,
           builder: (context, _) {
+            final grouped = controller.groupedItems;
+
             return Column(
               children: <Widget>[
                 const SizedBox(height: 12),
@@ -95,17 +97,20 @@ class ItemsBottomSheet extends StatelessWidget {
                       ? const _EmptyItemsState()
                       : ListView.separated(
                           padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
+                          itemCount: grouped.length,
+                          separatorBuilder: (_, __) => const SizedBox(height: 12),
                           itemBuilder: (context, index) {
-                            final item = controller.items[index];
-                            return _ItemCard(
-                              index: index,
-                              value: CurrencyFormatters.brl.format(item.value),
-                              description: item.description ?? 'Sem descricao',
-                              onRemove: () => controller.removeItem(item.id),
+                            final group = grouped[index];
+                            return _GroupedItemCard(
+                              group: group,
+                              onRemoveOne: () => controller.removeItem(group.ids.last),
+                              onRemoveAll: () async {
+                                for (final id in [...group.ids]) {
+                                  await controller.removeItem(id);
+                                }
+                              },
                             );
                           },
-                          separatorBuilder: (_, __) => const SizedBox(height: 12),
-                          itemCount: controller.itemCount,
                         ),
                 ),
                 Container(
@@ -196,23 +201,25 @@ class _EmptyItemsState extends StatelessWidget {
   }
 }
 
-class _ItemCard extends StatelessWidget {
-  const _ItemCard({
-    required this.index,
-    required this.value,
-    required this.description,
-    required this.onRemove,
+class _GroupedItemCard extends StatelessWidget {
+  const _GroupedItemCard({
+    required this.group,
+    required this.onRemoveOne,
+    required this.onRemoveAll,
   });
 
-  final int index;
-  final String value;
-  final String description;
-  final VoidCallback onRemove;
+  final GroupedItem group;
+  final VoidCallback onRemoveOne;
+  final Future<void> Function() onRemoveAll;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final palette = context.appPalette;
+    final description = group.description ?? 'Sem descricao';
+    final qty = group.quantity;
+    final unitFormatted = CurrencyFormatters.brl.format(group.unitValue);
+    final totalFormatted = CurrencyFormatters.brl.format(group.totalValue);
 
     return Container(
       padding: const EdgeInsets.all(14),
@@ -230,6 +237,7 @@ class _ItemCard extends StatelessWidget {
       ),
       child: Row(
         children: <Widget>[
+          // Badge de quantidade
           Container(
             width: 46,
             height: 46,
@@ -239,7 +247,7 @@ class _ItemCard extends StatelessWidget {
             ),
             alignment: Alignment.center,
             child: Text(
-              '${index + 1}',
+              qty > 1 ? '${qty}x' : '1',
               style: theme.textTheme.titleMedium?.copyWith(
                 color: palette.accent,
                 fontWeight: FontWeight.w900,
@@ -260,25 +268,39 @@ class _ItemCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  value,
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    color: palette.accentStrong,
-                    fontWeight: FontWeight.w900,
+                if (qty > 1) ...<Widget>[
+                  Text(
+                    '$qty x $unitFormatted = $totalFormatted',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: palette.accentStrong,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
-                ),
+                ] else ...<Widget>[
+                  Text(
+                    unitFormatted,
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      color: palette.accentStrong,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
           const SizedBox(width: 8),
-          IconButton.filledTonal(
-            onPressed: onRemove,
-            style: IconButton.styleFrom(
-              backgroundColor: palette.accentSoft,
-              foregroundColor: palette.accent,
+          // Botão remove um por vez; segura para remover todos
+          GestureDetector(
+            onLongPress: qty > 1 ? onRemoveAll : null,
+            child: IconButton.filledTonal(
+              onPressed: onRemoveOne,
+              style: IconButton.styleFrom(
+                backgroundColor: palette.accentSoft,
+                foregroundColor: palette.accent,
+              ),
+              icon: const Icon(Icons.remove_rounded),
+              tooltip: qty > 1 ? 'Remover 1 (segure para remover todos)' : 'Remover',
             ),
-            icon: const Icon(Icons.close_rounded),
-            tooltip: 'Remover item',
           ),
         ],
       ),

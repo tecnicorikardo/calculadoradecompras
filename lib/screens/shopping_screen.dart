@@ -1353,10 +1353,29 @@ class _ShoppingScreenState extends State<ShoppingScreen>
   Widget _buildLastItemCard(bool compact, bool tight, {bool condensed = false}) {
     final palette = context.appPalette;
     final lastItem = _controller.lastItem;
-    final description = lastItem?.description ?? 'Nenhum item adicionado';
+
+    // Encontra o grupo correspondente ao último item para mostrar quantidade
+    GroupedItem? lastGroup;
+    if (lastItem != null) {
+      final key = '${lastItem.description ?? ''}__${lastItem.value}';
+      for (final g in _controller.groupedItems) {
+        if ('${g.description ?? ''}__${g.unitValue}' == key) {
+          lastGroup = g;
+          break;
+        }
+      }
+    }
+
+    final qty = lastGroup?.quantity ?? 1;
+    final rawDescription = lastItem?.description ?? 'Nenhum item adicionado';
+    final description = (lastItem != null && qty > 1)
+        ? '${qty}x $rawDescription'
+        : rawDescription;
     final value = lastItem == null
         ? 'R\$ 0,00'
-        : CurrencyFormatters.brl.format(lastItem.value);
+        : qty > 1
+            ? '${qty} x ${CurrencyFormatters.brl.format(lastItem.value)} = ${CurrencyFormatters.brl.format(lastItem.value * qty)}'
+            : CurrencyFormatters.brl.format(lastItem.value);
     final descriptionColor = lastItem == null
         ? palette.textSecondary
         : palette.textPrimary;

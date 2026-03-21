@@ -25,6 +25,29 @@ class ShoppingController extends ChangeNotifier {
       UnmodifiableListView<ShoppingItem>(_session.items);
   int get itemCount => _session.items.length;
 
+  /// Agrupa itens por descrição + valor unitário.
+  /// Itens sem descrição são agrupados apenas por valor.
+  List<GroupedItem> get groupedItems {
+    final map = <String, GroupedItem>{};
+    for (final item in _session.items) {
+      final key = '${item.description ?? ''}__${item.value}';
+      if (map.containsKey(key)) {
+        map[key] = map[key]!.copyWith(
+          quantity: map[key]!.quantity + 1,
+          ids: [...map[key]!.ids, item.id],
+        );
+      } else {
+        map[key] = GroupedItem(
+          description: item.description,
+          unitValue: item.value,
+          quantity: 1,
+          ids: [item.id],
+        );
+      }
+    }
+    return map.values.toList();
+  }
+
   double get total => _session.items.fold<double>(
         0,
         (sum, item) => sum + item.value,
@@ -108,5 +131,33 @@ class ShoppingController extends ChangeNotifier {
 
   Future<void> _persist() {
     return _storageService.saveSession(_session);
+  }
+}
+
+class GroupedItem {
+  const GroupedItem({
+    required this.description,
+    required this.unitValue,
+    required this.quantity,
+    required this.ids,
+  });
+
+  final String? description;
+  final double unitValue;
+  final int quantity;
+  final List<String> ids;
+
+  double get totalValue => unitValue * quantity;
+
+  GroupedItem copyWith({
+    int? quantity,
+    List<String>? ids,
+  }) {
+    return GroupedItem(
+      description: description,
+      unitValue: unitValue,
+      quantity: quantity ?? this.quantity,
+      ids: ids ?? this.ids,
+    );
   }
 }
