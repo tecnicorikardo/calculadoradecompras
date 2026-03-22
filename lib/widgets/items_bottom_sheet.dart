@@ -216,10 +216,20 @@ class _GroupedItemCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final palette = context.appPalette;
-    final description = group.description ?? 'Sem descricao';
     final qty = group.quantity;
+    final hasDesc = group.description != null && group.description!.isNotEmpty;
     final unitFormatted = CurrencyFormatters.brl.format(group.unitValue);
     final totalFormatted = CurrencyFormatters.brl.format(group.totalValue);
+
+    // Linha principal: com descrição → "3x Arroz"  |  sem descrição → "3 x R$ 5,00"
+    final titleText = hasDesc
+        ? (qty > 1 ? '${qty}x ${group.description}' : group.description!)
+        : (qty > 1 ? '$qty x $unitFormatted' : unitFormatted);
+
+    // Linha secundária: total quando qty > 1, unitário quando qty == 1 sem descrição
+    final subtitleText = qty > 1
+        ? totalFormatted
+        : (hasDesc ? unitFormatted : null);
 
     return Container(
       padding: const EdgeInsets.all(14),
@@ -260,28 +270,20 @@ class _GroupedItemCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 Text(
-                  description,
+                  titleText,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w800,
                   ),
                 ),
-                const SizedBox(height: 4),
-                if (qty > 1) ...<Widget>[
+                if (subtitleText != null) ...<Widget>[
+                  const SizedBox(height: 3),
                   Text(
-                    '$qty x $unitFormatted = $totalFormatted',
+                    subtitleText,
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: palette.accentStrong,
                       fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ] else ...<Widget>[
-                  Text(
-                    unitFormatted,
-                    style: theme.textTheme.titleLarge?.copyWith(
-                      color: palette.accentStrong,
-                      fontWeight: FontWeight.w900,
                     ),
                   ),
                 ],
@@ -289,7 +291,6 @@ class _GroupedItemCard extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          // Botão remove um por vez; segura para remover todos
           GestureDetector(
             onLongPress: qty > 1 ? onRemoveAll : null,
             child: IconButton.filledTonal(
