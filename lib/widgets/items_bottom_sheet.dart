@@ -32,7 +32,8 @@ class ItemsBottomSheet extends StatelessWidget {
         child: AnimatedBuilder(
           animation: controller,
           builder: (context, _) {
-            final grouped = controller.groupedItems;
+            // Lista invertida: último adicionado aparece primeiro
+            final items = controller.items.toList().reversed.toList();
 
             return Column(
               children: <Widget>[
@@ -97,18 +98,14 @@ class ItemsBottomSheet extends StatelessWidget {
                       ? const _EmptyItemsState()
                       : ListView.separated(
                           padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
-                          itemCount: grouped.length,
+                          itemCount: items.length,
                           separatorBuilder: (_, __) => const SizedBox(height: 12),
                           itemBuilder: (context, index) {
-                            final group = grouped[index];
-                            return _GroupedItemCard(
-                              group: group,
-                              onRemoveOne: () => controller.removeItem(group.ids.last),
-                              onRemoveAll: () async {
-                                for (final id in [...group.ids]) {
-                                  await controller.removeItem(id);
-                                }
-                              },
+                            final item = items[index];
+                            return _ItemCard(
+                              description: item.description,
+                              value: item.value,
+                              onRemove: () => controller.removeItem(item.id),
                             );
                           },
                         ),
@@ -201,38 +198,25 @@ class _EmptyItemsState extends StatelessWidget {
   }
 }
 
-class _GroupedItemCard extends StatelessWidget {
-  const _GroupedItemCard({
-    required this.group,
-    required this.onRemoveOne,
-    required this.onRemoveAll,
+class _ItemCard extends StatelessWidget {
+  const _ItemCard({
+    required this.description,
+    required this.value,
+    required this.onRemove,
   });
 
-  final GroupedItem group;
-  final VoidCallback onRemoveOne;
-  final Future<void> Function() onRemoveAll;
+  final String? description;
+  final double value;
+  final VoidCallback onRemove;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final palette = context.appPalette;
-    final qty = group.quantity;
-    final hasDesc = group.description != null && group.description!.isNotEmpty;
-    final unitFormatted = CurrencyFormatters.brl.format(group.unitValue);
-    final totalFormatted = CurrencyFormatters.brl.format(group.totalValue);
-
-    // Linha principal: com descrição → "3x Arroz"  |  sem descrição → "3 x R$ 5,00"
-    final titleText = hasDesc
-        ? (qty > 1 ? '${qty}x ${group.description}' : group.description!)
-        : (qty > 1 ? '$qty x $unitFormatted' : unitFormatted);
-
-    // Linha secundária: total quando qty > 1, unitário quando qty == 1 sem descrição
-    final subtitleText = qty > 1
-        ? totalFormatted
-        : (hasDesc ? unitFormatted : null);
+    final valueFormatted = CurrencyFormatters.brl.format(value);
 
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: palette.surface,
         borderRadius: BorderRadius.circular(24),
@@ -247,61 +231,39 @@ class _GroupedItemCard extends StatelessWidget {
       ),
       child: Row(
         children: <Widget>[
-          // Badge de quantidade
-          Container(
-            width: 46,
-            height: 46,
-            decoration: BoxDecoration(
-              color: palette.accentSoft,
-              borderRadius: BorderRadius.circular(16),
-            ),
-            alignment: Alignment.center,
-            child: Text(
-              qty > 1 ? '${qty}x' : '1',
-              style: theme.textTheme.titleMedium?.copyWith(
-                color: palette.accent,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Text(
-                  titleText,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                if (subtitleText != null) ...<Widget>[
-                  const SizedBox(height: 3),
+                if (description != null) ...<Widget>[
                   Text(
-                    subtitleText,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: palette.accentStrong,
-                      fontWeight: FontWeight.w700,
+                    description!,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
                     ),
                   ),
+                  const SizedBox(height: 2),
                 ],
+                Text(
+                  valueFormatted,
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    color: palette.accentStrong,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
               ],
             ),
           ),
-          const SizedBox(width: 8),
-          GestureDetector(
-            onLongPress: qty > 1 ? onRemoveAll : null,
-            child: IconButton.filledTonal(
-              onPressed: onRemoveOne,
-              style: IconButton.styleFrom(
-                backgroundColor: palette.accentSoft,
-                foregroundColor: palette.accent,
-              ),
-              icon: const Icon(Icons.remove_rounded),
-              tooltip: qty > 1 ? 'Remover 1 (segure para remover todos)' : 'Remover',
+          IconButton.filledTonal(
+            onPressed: onRemove,
+            style: IconButton.styleFrom(
+              backgroundColor: palette.accentSoft,
+              foregroundColor: palette.accent,
             ),
+            icon: const Icon(Icons.remove_rounded),
+            tooltip: 'Remover',
           ),
         ],
       ),
