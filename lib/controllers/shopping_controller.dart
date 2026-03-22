@@ -25,10 +25,12 @@ class ShoppingController extends ChangeNotifier {
       UnmodifiableListView<ShoppingItem>(_session.items);
   int get itemCount => _session.items.length;
 
-  /// Agrupa itens por descrição + valor unitário.
-  /// Itens sem descrição são agrupados apenas por valor.
+  /// Agrupa itens por descrição + valor unitário, em ordem decrescente de
+  /// última inserção (o grupo do item mais recente aparece primeiro).
   List<GroupedItem> get groupedItems {
     final map = <String, GroupedItem>{};
+    final order = <String>[]; // rastreia ordem de última aparição de cada chave
+
     for (final item in _session.items) {
       final key = '${item.description ?? ''}__${item.value}';
       if (map.containsKey(key)) {
@@ -36,6 +38,9 @@ class ShoppingController extends ChangeNotifier {
           quantity: map[key]!.quantity + 1,
           ids: [...map[key]!.ids, item.id],
         );
+        // Move a chave para o final (mais recente)
+        order.remove(key);
+        order.add(key);
       } else {
         map[key] = GroupedItem(
           description: item.description,
@@ -43,9 +48,12 @@ class ShoppingController extends ChangeNotifier {
           quantity: 1,
           ids: [item.id],
         );
+        order.add(key);
       }
     }
-    return map.values.toList();
+
+    // Retorna em ordem decrescente (mais recente primeiro)
+    return order.reversed.map((k) => map[k]!).toList();
   }
 
   double get total => _session.items.fold<double>(
