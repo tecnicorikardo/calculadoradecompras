@@ -32,8 +32,8 @@ class ItemsBottomSheet extends StatelessWidget {
         child: AnimatedBuilder(
           animation: controller,
           builder: (context, _) {
-            // Lista invertida: último adicionado aparece primeiro
-            final items = controller.items.toList().reversed.toList();
+            // Lista agrupada: os itens mais recentes já vêm primeiro
+            final items = controller.groupedItems;
 
             return Column(
               children: <Widget>[
@@ -103,9 +103,8 @@ class ItemsBottomSheet extends StatelessWidget {
                           itemBuilder: (context, index) {
                             final item = items[index];
                             return _ItemCard(
-                              description: item.description,
-                              value: item.value,
-                              onRemove: () => controller.removeItem(item.id),
+                              item: item,
+                              onRemove: () => controller.removeItem(item.ids.last),
                             );
                           },
                         ),
@@ -200,20 +199,23 @@ class _EmptyItemsState extends StatelessWidget {
 
 class _ItemCard extends StatelessWidget {
   const _ItemCard({
-    required this.description,
-    required this.value,
+    required this.item,
     required this.onRemove,
   });
 
-  final String? description;
-  final double value;
+  final GroupedItem item;
   final VoidCallback onRemove;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final palette = context.appPalette;
-    final valueFormatted = CurrencyFormatters.brl.format(value);
+    
+    final unitFormatted = CurrencyFormatters.brl.format(item.unitValue);
+    final totalFormatted = CurrencyFormatters.brl.format(item.totalValue);
+    final valueFormatted = item.quantity > 1
+        ? '${item.quantity} x $unitFormatted = $totalFormatted'
+        : unitFormatted;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -235,9 +237,9 @@ class _ItemCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                if (description != null) ...<Widget>[
+                if (item.description != null) ...<Widget>[
                   Text(
-                    description!,
+                    item.description!,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.titleMedium?.copyWith(
@@ -246,11 +248,15 @@ class _ItemCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                 ],
-                Text(
-                  valueFormatted,
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    color: palette.accentStrong,
-                    fontWeight: FontWeight.w900,
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    valueFormatted,
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      color: palette.accentStrong,
+                      fontWeight: FontWeight.w900,
+                    ),
                   ),
                 ),
               ],

@@ -350,7 +350,6 @@ class _ShoppingScreenState extends State<ShoppingScreen>
 
     if (_budgetError != null) {
       _showMessage(_budgetError!);
-      _budgetFocusNode.requestFocus();
       return;
     }
 
@@ -673,6 +672,42 @@ class _ShoppingScreenState extends State<ShoppingScreen>
                       ),
                       const SizedBox(height: 20),
                       _SettingsSection(
+                        title: 'Limite de Gastos',
+                        child: TextField(
+                          controller: _budgetController,
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          onSubmitted: (_) {
+                            FocusScope.of(context).unfocus();
+                            _confirmBudgetLimit();
+                          },
+                          onTapOutside: (_) {
+                            FocusScope.of(context).unfocus();
+                            _applyBudgetLimit();
+                          },
+                          decoration: InputDecoration(
+                            isDense: true,
+                            hintText: 'R\$ 0,00',
+                            filled: true,
+                            fillColor: palette.surfaceMuted,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              borderSide: BorderSide.none,
+                            ),
+                            suffixIcon: IconButton(
+                              icon: Icon(Icons.check_rounded, color: palette.accent),
+                              onPressed: () {
+                                FocusScope.of(context).unfocus();
+                                _confirmBudgetLimit();
+                              },
+                            ),
+                          ),
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      _SettingsSection(
                         title: 'Tema',
                         child: SegmentedButton<ThemeMode>(
                           showSelectedIcon: false,
@@ -958,135 +993,6 @@ class _ShoppingScreenState extends State<ShoppingScreen>
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildLimitCard(bool compact, bool tight) {
-    final palette = context.appPalette;
-    final hasLimit = _budgetController.text.trim().isNotEmpty;
-    final active = _activeAmountField == _AmountFieldTarget.budget;
-    final labelFontSize = tight ? 9.0 : compact ? 10.0 : 13.0;
-    final badgeFontSize = tight ? 7.0 : compact ? 8.0 : 10.0;
-    final valueFontSize = tight ? 16.0 : compact ? 18.0 : 22.0;
-    final actionSize = tight ? 30.0 : compact ? 34.0 : 40.0;
-    final fieldColor = active || hasLimit
-        ? palette.accentStrong
-        : palette.textSecondary;
-
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.symmetric(
-        horizontal: tight ? 10 : compact ? 12 : 16,
-        vertical: tight ? 4 : compact ? 6 : 8,
-      ),
-      decoration: _glowCardDecoration(
-        compact: compact,
-        tight: tight,
-        outlined: true,
-        active: active,
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: <Widget>[
-          // Label + badge empilhados verticalmente à esquerda
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  Text(
-                    'Limite de Compra',
-                    style: TextStyle(
-                      color: palette.textSecondary,
-                      fontSize: labelFontSize,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  SizedBox(width: tight ? 4 : 6),
-                  Container(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: tight ? 5 : 7,
-                      vertical: tight ? 1 : 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: palette.accentSoft,
-                      borderRadius: BorderRadius.circular(99),
-                    ),
-                    child: Text(
-                      'Opcional',
-                      style: TextStyle(
-                        color: palette.accent,
-                        fontSize: badgeFontSize,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          SizedBox(width: tight ? 8 : 10),
-          // Campo de valor ocupa o espaço restante
-          Expanded(
-            child: TextField(
-              key: const ValueKey<String>('budget-field'),
-              controller: _budgetController,
-              focusNode: _budgetFocusNode,
-              keyboardType: TextInputType.none,
-              readOnly: true,
-              showCursor: true,
-              maxLines: 1,
-              onTap: _activateBudgetField,
-              onChanged: _handleBudgetChanged,
-              textAlign: TextAlign.right,
-              style: TextStyle(
-                color: fieldColor,
-                fontSize: valueFontSize,
-                fontWeight: FontWeight.w800,
-                letterSpacing: -0.3,
-              ),
-              cursorColor: palette.accent,
-              decoration: InputDecoration(
-                filled: false,
-                isCollapsed: true,
-                border: InputBorder.none,
-                enabledBorder: InputBorder.none,
-                focusedBorder: InputBorder.none,
-                disabledBorder: InputBorder.none,
-                errorBorder: InputBorder.none,
-                focusedErrorBorder: InputBorder.none,
-                contentPadding: EdgeInsets.zero,
-                hintText: 'R\$ 0,00',
-                hintStyle: TextStyle(
-                  color: palette.textSecondary,
-                  fontSize: valueFontSize,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ),
-          SizedBox(width: tight ? 6 : 8),
-          Tooltip(
-            message: 'Aplicar limite',
-            child: IconButton.filled(
-              onPressed: _confirmBudgetLimit,
-              icon: Icon(
-                Icons.check_rounded,
-                size: tight ? 16 : compact ? 18 : 20,
-              ),
-              style: IconButton.styleFrom(
-                backgroundColor: palette.accent,
-                foregroundColor: palette.accentForeground,
-                minimumSize: Size.square(actionSize),
-                padding: EdgeInsets.zero,
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 
@@ -1630,20 +1536,20 @@ class _ShoppingScreenState extends State<ShoppingScreen>
         : 'R\$ ${_productController.text}';
     final active = _activeAmountField == _AmountFieldTarget.product;
     final descriptionHintFontSize = tight
-        ? 11.0
+        ? 14.0
         : compact
-        ? 12.0
-        : 16.0;
+        ? 16.0
+        : 20.0;
     final descriptionFontSize = tight
-        ? 12.0
+        ? 16.0
         : compact
-        ? 13.0
-        : 17.0;
+        ? 18.0
+        : 22.0;
     final descriptionVerticalPadding = tight
-        ? 3.0
+        ? 6.0
         : compact
-        ? 4.0
-        : 6.0;
+        ? 8.0
+        : 12.0;
 
     return Row(
       children: <Widget>[
@@ -1721,10 +1627,10 @@ class _ShoppingScreenState extends State<ShoppingScreen>
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 180),
             width: tight
-                ? 120
+                ? 140
                 : compact
-                ? 128
-                : 148,
+                ? 160
+                : 200,
             height: double.infinity,
             padding: EdgeInsets.symmetric(
               horizontal: tight
@@ -1772,10 +1678,10 @@ class _ShoppingScreenState extends State<ShoppingScreen>
                         style: TextStyle(
                           color: palette.accent,
                           fontSize: tight
-                              ? 26
+                              ? 36
                               : compact
-                              ? 28
-                              : 32,
+                              ? 42
+                              : 48,
                           fontWeight: FontWeight.w900,
                           letterSpacing: -0.3,
                         ),
@@ -2003,16 +1909,11 @@ class _ShoppingScreenState extends State<ShoppingScreen>
                         : compact
                         ? 8.0
                         : 16.0;
-                    final limitHeight = tight
-                        ? 44.0
-                        : compact
-                        ? 50.0
-                        : 64.0;
                     final entryHeight = tight
-                        ? 62.0
+                        ? 80.0
                         : compact
-                        ? 66.0
-                        : 72.0;
+                        ? 90.0
+                        : 100.0;
                     final splitSummaryCards = compact;
                     final summaryCardsHeight = tight
                         ? 122.0
@@ -2062,12 +1963,6 @@ class _ShoppingScreenState extends State<ShoppingScreen>
                               child: Column(
                                 children: <Widget>[
                                   _buildHeader(compact, tight),
-                                  SizedBox(height: gap),
-                                  // Limit card — small fixed height
-                                  SizedBox(
-                                    height: limitHeight,
-                                    child: _buildLimitCard(compact, tight),
-                                  ),
                                   SizedBox(height: gap),
                                   // Total card — flex 3
                                   if (splitSummaryCards)

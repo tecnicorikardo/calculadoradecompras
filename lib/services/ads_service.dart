@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 /// IDs de anúncio.
@@ -27,6 +28,7 @@ class AdsService {
   bool _initialized = false;
 
   Future<void> initialize() async {
+    if (kIsWeb) return;
     if (_initialized) return;
     await MobileAds.instance.initialize();
     _initialized = true;

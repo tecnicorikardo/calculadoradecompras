@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
+
 import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -13,7 +15,7 @@ class PremiumService {
   PremiumService._();
   static final PremiumService instance = PremiumService._();
 
-  final InAppPurchase _iap = InAppPurchase.instance;
+  InAppPurchase get _iap => InAppPurchase.instance;
   StreamSubscription<List<PurchaseDetails>>? _subscription;
 
   /// Callback chamado quando o status PRO muda.
@@ -35,6 +37,7 @@ class PremiumService {
 
   /// Inicia o listener de compras. Chamar uma vez no app.
   void initialize() {
+    if (kIsWeb) return;
     _subscription = _iap.purchaseStream.listen(
       _handlePurchaseUpdates,
       onError: (_) {/* erros de stream — ignorar silenciosamente */},
@@ -48,6 +51,7 @@ class PremiumService {
   // ── Consulta de produto ──────────────────────────────────────────────────────
 
   Future<ProductDetails?> fetchProduct() async {
+    if (kIsWeb) return null;
     final available = await _iap.isAvailable();
     if (!available) return null;
 
@@ -60,6 +64,7 @@ class PremiumService {
 
   /// Inicia o fluxo de compra. Retorna false se a loja não estiver disponível.
   Future<bool> buyPro(ProductDetails product) async {
+    if (kIsWeb) return false;
     final available = await _iap.isAvailable();
     if (!available) return false;
 
@@ -70,6 +75,7 @@ class PremiumService {
   // ── Restauração ──────────────────────────────────────────────────────────────
 
   Future<void> restorePurchases() async {
+    if (kIsWeb) return;
     await _iap.restorePurchases();
   }
 
