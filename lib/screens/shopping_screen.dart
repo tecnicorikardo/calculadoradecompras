@@ -767,18 +767,9 @@ class _ShoppingScreenState extends State<ShoppingScreen>
                       const SizedBox(height: 16),
                       _SettingsSection(
                         title: 'Aplicativo',
-                        child: Column(
-                          children: <Widget>[
-                            _SettingsInfoRow(
-                              label: 'Nome',
-                              value: AppInfo.appName,
-                            ),
-                            const SizedBox(height: 10),
-                            _SettingsInfoRow(
-                              label: 'Versao',
-                              value: AppInfo.appVersion,
-                            ),
-                          ],
+                        child: _SettingsInfoRow(
+                          label: 'Nome',
+                          value: AppInfo.appName,
                         ),
                       ),
                       const SizedBox(height: 16),
