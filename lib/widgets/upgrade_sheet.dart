@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:in_app_purchase/in_app_purchase.dart';
+import 'package:url_launcher/url_launcher.dart';
 
-import '../controllers/premium_controller.dart';
+import '../controllers/pro_controller.dart';
 import '../core/theme/app_palette.dart';
-import '../services/premium_service.dart';
+import '../services/pro_service.dart';
 
-/// Bottom sheet de upgrade PRO e restauração de compra.
 class UpgradeSheet extends StatefulWidget {
   const UpgradeSheet({super.key});
 
@@ -14,243 +13,210 @@ class UpgradeSheet extends StatefulWidget {
 }
 
 class _UpgradeSheetState extends State<UpgradeSheet> {
-  ProductDetails? _product;
-  bool _loading = true;
-  String? _errorMessage;
-
-  @override
-  void initState() {
-    super.initState();
-    _fetchProduct();
-  }
-
-  Future<void> _fetchProduct() async {
-    setState(() {
-      _loading = true;
-      _errorMessage = null;
-    });
-    final product = await PremiumService.instance.fetchProduct();
-    if (!mounted) return;
-    setState(() {
-      _product = product;
-      _loading = false;
-      if (product == null) {
-        _errorMessage = 'Produto não encontrado na loja.\nVerifique sua conexão ou tente mais tarde.';
-      }
-    });
-  }
+  bool _loading = false;
+  String? _error;
 
   Future<void> _handleBuy() async {
-    if (_product == null) return;
-    final controller = PremiumController.instance;
-    controller.setPurchaseInProgress(true);
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
 
-    final ok = await PremiumService.instance.buyPro(_product!);
-    if (!ok && mounted) {
-      controller.setPurchaseInProgress(false);
-      _showSnack('Não foi possível iniciar a compra. Tente novamente.');
-    }
-    // Resultado chega via stream → PremiumController._onProStatusChanged
-  }
+    final url = await ProService.instance.createCheckoutUrl();
 
-  Future<void> _handleRestore() async {
-    final controller = PremiumController.instance;
-    controller.setPurchaseInProgress(true);
-    await PremiumService.instance.restorePurchases();
     if (!mounted) return;
-    controller.setPurchaseInProgress(false);
-    _showSnack('Restauração concluída.');
-  }
 
-  void _showSnack(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+    if (url == null) {
+      setState(() {
+        _loading = false;
+        _error = 'Não foi possível iniciar o pagamento. Tente novamente.';
+      });
+      return;
+    }
+
+    setState(() => _loading = false);
+
+    final uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      setState(() => _error = 'Não foi possível abrir o navegador.');
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final palette = context.appPalette;
+    final ctrl = ProController.instance;
 
     return Container(
       decoration: BoxDecoration(
         color: palette.surfaceSheet,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
       ),
-      padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
       child: SafeArea(
         top: false,
-        child: ListenableBuilder(
-          listenable: PremiumController.instance,
-          builder: (context, _) {
-            final controller = PremiumController.instance;
-
-            // Já é PRO — mostra confirmação
-            if (controller.isPro) {
-              return _ProConfirmedContent(palette: palette, theme: theme);
-            }
-
-            return Column(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                // Handle
-                Center(
-                  child: Container(
-                    width: 46,
-                    height: 5,
-                    decoration: BoxDecoration(
-                      color: palette.handle,
-                      borderRadius: BorderRadius.circular(99),
-                    ),
-                  ),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Container(
+                width: 46,
+                height: 5,
+                decoration: BoxDecoration(
+                  color: palette.handle,
+                  borderRadius: BorderRadius.circular(99),
                 ),
-                const SizedBox(height: 24),
-
-                // Ícone
-                Container(
-                  width: 72,
-                  height: 72,
-                  decoration: BoxDecoration(
-                    color: palette.accentSoft,
-                    borderRadius: BorderRadius.circular(24),
-                  ),
-                  child: Icon(Icons.workspace_premium_rounded,
-                      size: 36, color: palette.accent),
+              ),
+              const SizedBox(height: 28),
+              Container(
+                width: 72,
+                height: 72,
+                decoration: BoxDecoration(
+                  color: palette.accentSoft,
+                  borderRadius: BorderRadius.circular(24),
                 ),
-                const SizedBox(height: 16),
-
+                child: Icon(
+                  Icons.workspace_premium_rounded,
+                  color: palette.accent,
+                  size: 36,
+                ),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                'Soma Fácil PRO',
+                style: theme.textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                ctrl.isTrialActive
+                    ? 'Você tem ${ctrl.trialDaysRemaining} dias grátis restantes.\nApós isso, adquira o acesso vitalício.'
+                    : 'Seu período gratuito encerrou.\nAdquira o acesso vitalício por apenas R\$ 10.',
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: palette.textSecondary,
+                  height: 1.5,
+                ),
+              ),
+              const SizedBox(height: 28),
+              // Benefícios
+              _BenefitRow(
+                icon: Icons.all_inclusive_rounded,
+                label: 'Acesso vitalício — pague uma vez',
+                palette: palette,
+                theme: theme,
+              ),
+              const SizedBox(height: 10),
+              _BenefitRow(
+                icon: Icons.block_rounded,
+                label: 'Sem anúncios para sempre',
+                palette: palette,
+                theme: theme,
+              ),
+              const SizedBox(height: 10),
+              _BenefitRow(
+                icon: Icons.support_agent_rounded,
+                label: 'Suporte prioritário',
+                palette: palette,
+                theme: theme,
+              ),
+              const SizedBox(height: 32),
+              if (_error != null) ...<Widget>[
                 Text(
-                  'Versão PRO',
-                  style: theme.textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Compra única e vitalícia.\nRemova os anúncios para sempre.',
+                  _error!,
                   textAlign: TextAlign.center,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: palette.textSecondary,
-                    height: 1.5,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: palette.accentStrong,
                   ),
                 ),
-                const SizedBox(height: 28),
-
-                // Botão comprar
-                if (_loading)
-                  const CircularProgressIndicator()
-                else if (_errorMessage != null)
-                  Column(
-                    children: <Widget>[
-                      Text(
-                        _errorMessage!,
-                        textAlign: TextAlign.center,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: palette.textSecondary,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      TextButton(
-                        onPressed: _fetchProduct,
-                        child: const Text('Tentar novamente'),
-                      ),
-                    ],
-                  )
-                else
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton(
-                      onPressed: controller.purchaseInProgress ? null : _handleBuy,
-                      style: FilledButton.styleFrom(
-                        backgroundColor: palette.accent,
-                        foregroundColor: palette.accentForeground,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(22),
-                        ),
-                      ),
-                      child: controller.purchaseInProgress
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : Text(
-                              'Remover anúncios por ${_product?.price ?? 'R\$ 7,99'}',
-                              style: theme.textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.w800,
-                                color: palette.accentForeground,
-                              ),
-                            ),
+                const SizedBox(height: 12),
+              ],
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: _loading ? null : _handleBuy,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: palette.accent,
+                    foregroundColor: palette.accentForeground,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(18),
                     ),
                   ),
-
-                const SizedBox(height: 12),
-
-                // Restaurar compra
-                TextButton(
-                  onPressed: controller.purchaseInProgress ? null : _handleRestore,
-                  style: TextButton.styleFrom(foregroundColor: palette.textSecondary),
-                  child: const Text('Restaurar compra'),
+                  child: _loading
+                      ? const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.5,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text(
+                          'Comprar acesso vitalício — R\$ 10,00',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 15,
+                          ),
+                        ),
                 ),
-              ],
-            );
-          },
+              ),
+              const SizedBox(height: 12),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: Text(
+                  ctrl.isTrialActive ? 'Continuar no período gratuito' : 'Fechar',
+                  style: TextStyle(color: palette.textSecondary),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-class _ProConfirmedContent extends StatelessWidget {
-  const _ProConfirmedContent({required this.palette, required this.theme});
+class _BenefitRow extends StatelessWidget {
+  const _BenefitRow({
+    required this.icon,
+    required this.label,
+    required this.palette,
+    required this.theme,
+  });
 
+  final IconData icon;
+  final String label;
   final AppPalette palette;
   final ThemeData theme;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 24),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          Icon(Icons.check_circle_rounded, size: 64, color: palette.accent),
-          const SizedBox(height: 16),
-          Text(
-            'Você já é PRO',
-            style: theme.textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.w900,
-            ),
+    return Row(
+      children: <Widget>[
+        Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: palette.accentSoft,
+            borderRadius: BorderRadius.circular(12),
           ),
-          const SizedBox(height: 8),
-          Text(
-            'Anúncios removidos. Obrigado pelo apoio!',
-            textAlign: TextAlign.center,
+          child: Icon(icon, color: palette.accent, size: 18),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            label,
             style: theme.textTheme.bodyMedium?.copyWith(
-              color: palette.textSecondary,
+              fontWeight: FontWeight.w600,
             ),
           ),
-          const SizedBox(height: 24),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton(
-              onPressed: () => Navigator.of(context).pop(),
-              style: FilledButton.styleFrom(
-                backgroundColor: palette.accent,
-                foregroundColor: palette.accentForeground,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(22),
-                ),
-              ),
-              child: const Text('Fechar'),
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

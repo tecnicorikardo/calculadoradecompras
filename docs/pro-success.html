@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pagamento aprovado – Soma Fácil</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #fff5f5;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 24px;
+    }
+    .card {
+      background: white;
+      border-radius: 24px;
+      padding: 40px 32px;
+      max-width: 400px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 8px 32px rgba(255,77,87,0.12);
+    }
+    .icon { font-size: 64px; margin-bottom: 16px; }
+    h1 { color: #ff2f38; font-size: 1.6rem; margin-bottom: 8px; }
+    p { color: #737b88; line-height: 1.6; margin-bottom: 24px; }
+    .btn {
+      display: inline-block;
+      background: #ff4d57;
+      color: white;
+      padding: 14px 32px;
+      border-radius: 16px;
+      text-decoration: none;
+      font-weight: 700;
+      font-size: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon">🎉</div>
+    <h1>Pagamento aprovado!</h1>
+    <p>Seu acesso vitalício ao <strong>Soma Fácil PRO</strong> foi ativado. Volte ao app para continuar.</p>
+    <a class="btn" href="somafacil://pro-activated">Voltar ao app</a>
+  </div>
+  <script>
+    // Tenta abrir o app automaticamente
+    setTimeout(() => {
+      window.location.href = 'somafacil://pro-activated';
+    }, 1500);
+  </script>
+</body>
+</html>

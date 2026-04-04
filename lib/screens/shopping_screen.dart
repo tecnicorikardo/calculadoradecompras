@@ -2,15 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 
-import '../controllers/premium_controller.dart';
 import '../controllers/shopping_controller.dart';
+import '../controllers/pro_controller.dart';
 import '../core/config/app_info.dart';
 import '../core/theme/app_palette.dart';
 import '../core/utils/currency_formatters.dart';
 import '../core/utils/currency_input_parser.dart';
 import '../models/budget_status.dart';
 import '../services/local_storage_service.dart';
-import '../widgets/ad_banner_widget.dart';
 import '../widgets/items_bottom_sheet.dart';
 import '../widgets/numeric_keypad.dart';
 import '../widgets/upgrade_sheet.dart';
@@ -569,7 +568,7 @@ class _ShoppingScreenState extends State<ShoppingScreen>
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => const UpgradeSheet(),
-    );
+    ).then((_) => ProController.instance.refresh());
   }
 
   Future<void> _showItemsSheet() {
@@ -772,54 +771,7 @@ class _ShoppingScreenState extends State<ShoppingScreen>
                           value: AppInfo.appName,
                         ),
                       ),
-                      const SizedBox(height: 16),
-                      // Seção PRO — só aparece se não for PRO
-                      ListenableBuilder(
-                        listenable: PremiumController.instance,
-                        builder: (context, _) {
-                          if (PremiumController.instance.isPro) {
-                            return _SettingsSection(
-                              title: 'Versão PRO',
-                              child: Row(
-                                children: <Widget>[
-                                  Icon(Icons.workspace_premium_rounded,
-                                      color: palette.accent),
-                                  const SizedBox(width: 10),
-                                  Text(
-                                    'Anúncios removidos. Obrigado!',
-                                    style: theme.textTheme.bodyMedium?.copyWith(
-                                      color: palette.accent,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          }
-                          return _SettingsSection(
-                            title: 'Versão PRO',
-                            child: SizedBox(
-                              width: double.infinity,
-                              child: FilledButton.icon(
-                                onPressed: () {
-                                  Navigator.of(context).pop();
-                                  _showUpgradeSheet();
-                                },
-                                icon: const Icon(Icons.workspace_premium_rounded),
-                                label: const Text('Remover anúncios por R\$ 7,99'),
-                                style: FilledButton.styleFrom(
-                                  backgroundColor: palette.accent,
-                                  foregroundColor: palette.accentForeground,
-                                  padding: const EdgeInsets.symmetric(vertical: 14),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(18),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
+
                     ],
                   ),
                 ),
@@ -921,67 +873,90 @@ class _ShoppingScreenState extends State<ShoppingScreen>
   Widget _buildHeader(bool compact, bool tight) {
     final palette = context.appPalette;
     final alertColor = _budgetAlertColor(palette);
+    final pro = ProController.instance;
 
-    return Row(
+    return Column(
+      mainAxisSize: MainAxisSize.min,
       children: <Widget>[
-        Expanded(
-          child: Row(
-            children: <Widget>[
-              Flexible(
-                child: Text(
-                  AppInfo.appName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: palette.accentStrong,
-                    fontSize: tight
-                        ? 17
-                        : compact
-                        ? 19
-                        : 28,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: -0.4,
+        Row(
+          children: <Widget>[
+            Expanded(
+              child: Row(
+                children: <Widget>[
+                  Flexible(
+                    child: Text(
+                      AppInfo.appName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: palette.accentStrong,
+                        fontSize: tight ? 17 : compact ? 19 : 28,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -0.4,
+                      ),
+                    ),
                   ),
-                ),
+                  if (_showAlertTitle) ...<Widget>[
+                    SizedBox(width: tight ? 6 : compact ? 8 : 16),
+                    Expanded(
+                      child: Text(
+                        _budgetAlertHeadline,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: alertColor,
+                          fontSize: tight ? 14 : compact ? 16 : 24,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.2,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
               ),
-              if (_showAlertTitle) ...<Widget>[
-                SizedBox(
-                  width: tight
-                      ? 6
-                      : compact
-                      ? 8
-                      : 16,
-                ),
-                Expanded(
-                  child: Text(
-                    _budgetAlertHeadline,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: alertColor,
-                      fontSize: tight
-                          ? 14
-                          : compact
-                          ? 16
-                          : 24,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: -0.2,
+            ),
+            SizedBox(width: tight ? 8 : 12),
+            // Botão PRO se trial ativo
+            if (!pro.isPro && pro.isTrialActive)
+              Padding(
+                padding: const EdgeInsets.only(right: 6),
+                child: GestureDetector(
+                  onTap: _showUpgradeSheet,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: palette.accentSoft,
+                      borderRadius: BorderRadius.circular(99),
+                      border: Border.all(color: palette.accent.withValues(alpha: 0.3)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        Icon(Icons.workspace_premium_rounded, color: palette.accent, size: 13),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${pro.trialDaysRemaining}d grátis',
+                          style: TextStyle(
+                            color: palette.accent,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
-              ],
-            ],
-          ),
-        ),
-        SizedBox(width: tight ? 8 : 12),
-        IconButton.filledTonal(
-          onPressed: _showSettingsSheet,
-          icon: Icon(Icons.tune_rounded, size: tight ? 18 : 22),
-          style: IconButton.styleFrom(
-            backgroundColor: palette.accentSoft,
-            foregroundColor: palette.accent,
-            minimumSize: Size.square(tight ? 38 : 44),
-          ),
+              ),
+            IconButton.filledTonal(
+              onPressed: _showSettingsSheet,
+              icon: Icon(Icons.tune_rounded, size: tight ? 18 : 22),
+              style: IconButton.styleFrom(
+                backgroundColor: palette.accentSoft,
+                foregroundColor: palette.accent,
+                minimumSize: Size.square(tight ? 38 : 44),
+              ),
+            ),
+          ],
         ),
       ],
     );
@@ -1815,6 +1790,65 @@ class _ShoppingScreenState extends State<ShoppingScreen>
     );
   }
 
+  Widget _buildPaywallGate() {
+    final theme = Theme.of(context);
+    final palette = context.appPalette;
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                color: palette.accentSoft,
+                borderRadius: BorderRadius.circular(28),
+              ),
+              child: Icon(Icons.lock_rounded, color: palette.accent, size: 36),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'Período gratuito encerrado',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Adquira o acesso vitalício por R\$ 10,00 e continue usando o Soma Fácil para sempre.',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: palette.textSecondary,
+                height: 1.5,
+              ),
+            ),
+            const SizedBox(height: 32),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: _showUpgradeSheet,
+                icon: const Icon(Icons.workspace_premium_rounded),
+                label: const Text('Ver planos — R\$ 10,00'),
+                style: FilledButton.styleFrom(
+                  backgroundColor: palette.accent,
+                  foregroundColor: palette.accentForeground,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   void dispose() {
     _controller.removeListener(_handleBudgetAlertStateChanged);
@@ -1849,28 +1883,31 @@ class _ShoppingScreenState extends State<ShoppingScreen>
       value: overlayStyle,
       child: Scaffold(
         resizeToAvoidBottomInset: false,
-        body: Column(
-          children: <Widget>[
-            Expanded(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: palette.backgroundBottom,
-                  gradient: RadialGradient(
-                    center: Alignment.topCenter,
-                    radius: 1.15,
-                    colors: <Color>[
-                      palette.backgroundTop,
-                      palette.backgroundMiddle,
-                      palette.backgroundBottom,
-                    ],
-                  ),
-                ),
+        body: DecoratedBox(
+          decoration: BoxDecoration(
+            color: palette.backgroundBottom,
+            gradient: RadialGradient(
+              center: Alignment.topCenter,
+              radius: 1.15,
+              colors: <Color>[
+                palette.backgroundTop,
+                palette.backgroundMiddle,
+                palette.backgroundBottom,
+              ],
+            ),
+          ),
           child: SafeArea(
             child: AnimatedBuilder(
               animation: _controller,
               builder: (context, _) {
                 if (_controller.isLoading) {
                   return const Center(child: CircularProgressIndicator());
+                }
+
+                // Trial expirado e não é PRO — mostra gate
+                final pro = ProController.instance;
+                if (!pro.hasAccess) {
+                  return _buildPaywallGate();
                 }
 
                 return LayoutBuilder(
@@ -2002,19 +2039,6 @@ class _ShoppingScreenState extends State<ShoppingScreen>
               },
             ),
           ),
-        ),
-      ),
-            // Banner fixo abaixo do conteúdo, só para não-PRO
-            ListenableBuilder(
-              listenable: PremiumController.instance,
-              builder: (context, _) {
-                if (PremiumController.instance.isPro) {
-                  return const SizedBox.shrink();
-                }
-                return const AdBannerWidget();
-              },
-            ),
-          ],
         ),
       ),
     );
