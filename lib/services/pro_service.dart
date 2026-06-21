@@ -32,8 +32,8 @@ class ProService {
     final prefs = await SharedPreferences.getInstance();
     var id = prefs.getString(_prefKeyDeviceId);
     if (id == null) {
-      id =
-          '${Platform.operatingSystem}_${DateTime.now().microsecondsSinceEpoch}';
+      final platformName = kIsWeb ? 'web' : Platform.operatingSystem;
+      id = '${platformName}_${DateTime.now().microsecondsSinceEpoch}';
       await prefs.setString(_prefKeyDeviceId, id);
     }
     return id;
@@ -78,6 +78,8 @@ class ProService {
 
     // Cache local
     if (prefs.getBool(_prefKeyIsPro) == true) return true;
+
+    if (kIsWeb) return false;
 
     // Consulta remota
     HttpClient? client;

@@ -9,7 +9,9 @@ import '../core/theme/app_palette.dart';
 import '../core/utils/currency_formatters.dart';
 import '../core/utils/currency_input_parser.dart';
 import '../models/budget_status.dart';
+import '../services/item_suggestions_service.dart';
 import '../services/local_storage_service.dart';
+import '../widgets/item_selector_sheet.dart';
 import '../widgets/items_bottom_sheet.dart';
 import '../widgets/numeric_keypad.dart';
 import '../widgets/upgrade_sheet.dart';
@@ -187,6 +189,8 @@ class _ShoppingScreenState extends State<ShoppingScreen>
     with SingleTickerProviderStateMixin {
   late final ShoppingController _controller;
   late final AnimationController _budgetAlertPulseController;
+  final ItemSuggestionsService _itemSuggestionsService =
+      const ItemSuggestionsService();
   final TextEditingController _budgetController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
   final TextEditingController _productController = TextEditingController();
@@ -555,6 +559,29 @@ class _ShoppingScreenState extends State<ShoppingScreen>
           onShare: () {
             Navigator.of(context).pop();
             _shareList();
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _showItemSelectorSheet() {
+    FocusManager.instance.primaryFocus?.unfocus();
+    return showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return ItemSelectorSheet(
+          suggestionsService: _itemSuggestionsService,
+          onItemSelected: (item) {
+            _descriptionController.text = item;
+            _descriptionController.selection = TextSelection.collapsed(
+              offset: item.length,
+            );
+            setState(() {
+              _activeAmountField = _AmountFieldTarget.product;
+            });
           },
         );
       },
@@ -1537,42 +1564,62 @@ class _ShoppingScreenState extends State<ShoppingScreen>
               vertical: descriptionVerticalPadding,
             ),
             alignment: Alignment.centerLeft,
-            child: TextField(
-              key: const ValueKey<String>('description-field'),
-              controller: _descriptionController,
-              focusNode: _descriptionFocusNode,
-              maxLines: 1,
-              textInputAction: TextInputAction.done,
-              textAlignVertical: TextAlignVertical.center,
-              strutStyle: StrutStyle(
-                fontSize: descriptionFontSize,
-                height: 1.2,
-              ),
-              decoration: InputDecoration(
-                filled: false,
-                isCollapsed: true,
-                border: InputBorder.none,
-                enabledBorder: InputBorder.none,
-                focusedBorder: InputBorder.none,
-                disabledBorder: InputBorder.none,
-                errorBorder: InputBorder.none,
-                focusedErrorBorder: InputBorder.none,
-                contentPadding: EdgeInsets.symmetric(
-                  vertical: descriptionVerticalPadding,
+            child: Row(
+              children: <Widget>[
+                Expanded(
+                  child: TextField(
+                    key: const ValueKey<String>('description-field'),
+                    controller: _descriptionController,
+                    focusNode: _descriptionFocusNode,
+                    maxLines: 1,
+                    textInputAction: TextInputAction.done,
+                    textAlignVertical: TextAlignVertical.center,
+                    strutStyle: StrutStyle(
+                      fontSize: descriptionFontSize,
+                      height: 1.2,
+                    ),
+                    decoration: InputDecoration(
+                      filled: false,
+                      isCollapsed: true,
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      disabledBorder: InputBorder.none,
+                      errorBorder: InputBorder.none,
+                      focusedErrorBorder: InputBorder.none,
+                      contentPadding: EdgeInsets.symmetric(
+                        vertical: descriptionVerticalPadding,
+                      ),
+                      hintText: 'Descricao do item (opcional)',
+                      hintStyle: TextStyle(
+                        color: palette.textSecondary,
+                        fontSize: descriptionHintFontSize,
+                        height: 1.2,
+                      ),
+                    ),
+                    style: TextStyle(
+                      color: palette.textPrimary,
+                      fontSize: descriptionFontSize,
+                      fontWeight: FontWeight.w700,
+                      height: 1.2,
+                    ),
+                  ),
                 ),
-                hintText: 'Descricao do item (opcional)',
-                hintStyle: TextStyle(
-                  color: palette.textSecondary,
-                  fontSize: descriptionHintFontSize,
-                  height: 1.2,
+                const SizedBox(width: 6),
+                IconButton.filledTonal(
+                  key: const ValueKey<String>('item-selector-button'),
+                  onPressed: _showItemSelectorSheet,
+                  style: IconButton.styleFrom(
+                    backgroundColor: palette.accentSoft,
+                    foregroundColor: palette.accent,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    minimumSize: Size(tight ? 34 : 40, tight ? 34 : 40),
+                    padding: EdgeInsets.zero,
+                  ),
+                  icon: const Icon(Icons.search_rounded),
+                  tooltip: 'Buscar item cadastrado',
                 ),
-              ),
-              style: TextStyle(
-                color: palette.textPrimary,
-                fontSize: descriptionFontSize,
-                fontWeight: FontWeight.w700,
-                height: 1.2,
-              ),
+              ],
             ),
           ),
         ),

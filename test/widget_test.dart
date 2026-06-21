@@ -88,4 +88,34 @@ void main() {
     expect(find.text('Itens adicionados'), findsOneWidget);
     expect(find.text('Compartilhar lista'), findsOneWidget);
   });
+
+  testWidgets('seleciona item cadastrado recuperado do app de referencia', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    configurePhoneViewport(tester);
+    addTearDown(() => resetViewport(tester));
+
+    await tester.pumpWidget(const QuickSumApp());
+    await tester.pumpAndSettle();
+
+    await tester.tap(
+      find.byKey(const ValueKey<String>('item-selector-button')),
+      warnIfMissed: false,
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Itens cadastrados'), findsOneWidget);
+
+    await tester.enterText(
+      find.byKey(const ValueKey<String>('item-selector-search')),
+      'arroz agulhinha',
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Arroz Agulhinha'), warnIfMissed: false);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Arroz Agulhinha'), findsWidgets);
+  });
 }
