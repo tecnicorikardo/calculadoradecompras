@@ -146,8 +146,12 @@ class ProService {
       }
 
       final checkoutUrl = responseJson['checkout_url'];
-      if (checkoutUrl is! String ||
-          !Uri.tryParse(checkoutUrl)!.hasAbsolutePath) {
+      final checkoutUri = checkoutUrl is String
+          ? Uri.tryParse(checkoutUrl)
+          : null;
+      if (checkoutUri == null ||
+          !checkoutUri.hasScheme ||
+          checkoutUri.host.isEmpty) {
         throw const CheckoutException(
           'O serviço de pagamento retornou uma resposta inválida.',
         );
