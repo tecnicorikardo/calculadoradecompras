@@ -199,6 +199,7 @@ class _ShoppingScreenState extends State<ShoppingScreen>
 
   String? _budgetError;
   _AmountFieldTarget _activeAmountField = _AmountFieldTarget.product;
+  List<String> _customItemSuggestions = <String>[];
 
   @override
   void initState() {
@@ -275,6 +276,8 @@ class _ShoppingScreenState extends State<ShoppingScreen>
 
   Future<void> _initialize() async {
     await _controller.load();
+    final customItemSuggestions = await _itemSuggestionsService
+        .loadCustomItems();
     if (!mounted) {
       return;
     }
@@ -287,7 +290,9 @@ class _ShoppingScreenState extends State<ShoppingScreen>
       await _controller.setBudgetLimit(null);
     }
 
-    setState(() {});
+    setState(() {
+      _customItemSuggestions = customItemSuggestions;
+    });
   }
 
   Future<void> _applyBudgetLimit() async {
@@ -483,7 +488,12 @@ class _ShoppingScreenState extends State<ShoppingScreen>
       return;
     }
 
-    await _controller.addItem(value, description: _descriptionController.text);
+    final description = _itemSuggestionsService.cleanItemName(
+      _descriptionController.text,
+    );
+
+    await _controller.addItem(value, description: description);
+    await _saveCustomItemSuggestion(description);
 
     await _applyBudgetLimit();
     _descriptionController.clear();
@@ -574,18 +584,45 @@ class _ShoppingScreenState extends State<ShoppingScreen>
       builder: (context) {
         return ItemSelectorSheet(
           suggestionsService: _itemSuggestionsService,
-          onItemSelected: (item) {
-            _descriptionController.text = item;
-            _descriptionController.selection = TextSelection.collapsed(
-              offset: item.length,
-            );
-            setState(() {
-              _activeAmountField = _AmountFieldTarget.product;
-            });
-          },
+          customItems: _customItemSuggestions,
+          onItemSelected: _selectRegisteredItem,
         );
       },
     );
+  }
+
+  Future<void> _selectRegisteredItem(String item) async {
+    final description = _itemSuggestionsService.cleanItemName(item);
+    if (description.isEmpty) {
+      return;
+    }
+
+    _descriptionController.text = description;
+    _descriptionController.selection = TextSelection.collapsed(
+      offset: description.length,
+    );
+    setState(() {
+      _activeAmountField = _AmountFieldTarget.product;
+    });
+
+    await _saveCustomItemSuggestion(description);
+  }
+
+  Future<void> _saveCustomItemSuggestion(String description) async {
+    final saved = await _itemSuggestionsService.saveCustomItem(description);
+    if (!saved || !mounted) {
+      return;
+    }
+
+    final customItemSuggestions = await _itemSuggestionsService
+        .loadCustomItems();
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _customItemSuggestions = customItemSuggestions;
+    });
   }
 
   Future<void> _handleFloatingAction() async {
@@ -1564,62 +1601,42 @@ class _ShoppingScreenState extends State<ShoppingScreen>
               vertical: descriptionVerticalPadding,
             ),
             alignment: Alignment.centerLeft,
-            child: Row(
-              children: <Widget>[
-                Expanded(
-                  child: TextField(
-                    key: const ValueKey<String>('description-field'),
-                    controller: _descriptionController,
-                    focusNode: _descriptionFocusNode,
-                    maxLines: 1,
-                    textInputAction: TextInputAction.done,
-                    textAlignVertical: TextAlignVertical.center,
-                    strutStyle: StrutStyle(
-                      fontSize: descriptionFontSize,
-                      height: 1.2,
-                    ),
-                    decoration: InputDecoration(
-                      filled: false,
-                      isCollapsed: true,
-                      border: InputBorder.none,
-                      enabledBorder: InputBorder.none,
-                      focusedBorder: InputBorder.none,
-                      disabledBorder: InputBorder.none,
-                      errorBorder: InputBorder.none,
-                      focusedErrorBorder: InputBorder.none,
-                      contentPadding: EdgeInsets.symmetric(
-                        vertical: descriptionVerticalPadding,
-                      ),
-                      hintText: 'Descricao do item (opcional)',
-                      hintStyle: TextStyle(
-                        color: palette.textSecondary,
-                        fontSize: descriptionHintFontSize,
-                        height: 1.2,
-                      ),
-                    ),
-                    style: TextStyle(
-                      color: palette.textPrimary,
-                      fontSize: descriptionFontSize,
-                      fontWeight: FontWeight.w700,
-                      height: 1.2,
-                    ),
-                  ),
+            child: TextField(
+              key: const ValueKey<String>('description-field'),
+              controller: _descriptionController,
+              focusNode: _descriptionFocusNode,
+              maxLines: 1,
+              textInputAction: TextInputAction.done,
+              textAlignVertical: TextAlignVertical.center,
+              strutStyle: StrutStyle(
+                fontSize: descriptionFontSize,
+                height: 1.2,
+              ),
+              decoration: InputDecoration(
+                filled: false,
+                isCollapsed: true,
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                disabledBorder: InputBorder.none,
+                errorBorder: InputBorder.none,
+                focusedErrorBorder: InputBorder.none,
+                contentPadding: EdgeInsets.symmetric(
+                  vertical: descriptionVerticalPadding,
                 ),
-                const SizedBox(width: 6),
-                IconButton.filledTonal(
-                  key: const ValueKey<String>('item-selector-button'),
-                  onPressed: _showItemSelectorSheet,
-                  style: IconButton.styleFrom(
-                    backgroundColor: palette.accentSoft,
-                    foregroundColor: palette.accent,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    minimumSize: Size(tight ? 34 : 40, tight ? 34 : 40),
-                    padding: EdgeInsets.zero,
-                  ),
-                  icon: const Icon(Icons.search_rounded),
-                  tooltip: 'Buscar item cadastrado',
+                hintText: 'Descricao do item (opcional)',
+                hintStyle: TextStyle(
+                  color: palette.textSecondary,
+                  fontSize: descriptionHintFontSize,
+                  height: 1.2,
                 ),
-              ],
+              ),
+              style: TextStyle(
+                color: palette.textPrimary,
+                fontSize: descriptionFontSize,
+                fontWeight: FontWeight.w700,
+                height: 1.2,
+              ),
             ),
           ),
         ),
@@ -1711,6 +1728,80 @@ class _ShoppingScreenState extends State<ShoppingScreen>
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildItemSelectorButton(bool compact, bool tight) {
+    final theme = Theme.of(context);
+    final palette = context.appPalette;
+
+    return Center(
+      child: Tooltip(
+        message: 'Buscar item cadastrado',
+        child: Material(
+          color: palette.surface,
+          borderRadius: BorderRadius.circular(14),
+          child: InkWell(
+            key: const ValueKey<String>('item-selector-button'),
+            onTap: _showItemSelectorSheet,
+            borderRadius: BorderRadius.circular(14),
+            child: Container(
+              height: tight
+                  ? 34
+                  : compact
+                  ? 38
+                  : 42,
+              padding: EdgeInsets.symmetric(
+                horizontal: tight
+                    ? 12
+                    : compact
+                    ? 14
+                    : 16,
+              ),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: palette.border),
+                boxShadow: <BoxShadow>[
+                  BoxShadow(
+                    color: palette.shadow,
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  Icon(
+                    Icons.format_list_bulleted_rounded,
+                    color: palette.textSecondary,
+                    size: tight ? 15 : 17,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Itens cadastrados',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: palette.textSecondary,
+                      fontSize: tight
+                          ? 12
+                          : compact
+                          ? 13
+                          : 14,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Icon(
+                    Icons.keyboard_arrow_down_rounded,
+                    color: palette.textSecondary,
+                    size: tight ? 17 : 19,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -2075,6 +2166,8 @@ class _ShoppingScreenState extends State<ShoppingScreen>
                                     height: entryHeight,
                                     child: _buildEntryStrip(compact, tight),
                                   ),
+                                  SizedBox(height: tight ? 6 : 8),
+                                  _buildItemSelectorButton(compact, tight),
                                   SizedBox(height: gap),
                                   // Keypad — flex 5 (biggest slice)
                                   Expanded(

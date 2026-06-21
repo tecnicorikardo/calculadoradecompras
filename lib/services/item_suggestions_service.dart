@@ -1,22 +1,58 @@
+import 'package:shared_preferences/shared_preferences.dart';
+
 import '../data/default_item_catalog.dart';
 
 class ItemSuggestionsService {
   const ItemSuggestionsService();
 
+  static const String _customItemsKey = 'custom_item_suggestions_v1';
+
   List<String> getDefaultItems() {
     return DefaultItemCatalog.names;
   }
 
-  List<String> search(String query, {int limit = 500}) {
+  Future<List<String>> loadCustomItems() async {
+    final preferences = await SharedPreferences.getInstance();
+    final savedItems = preferences.getStringList(_customItemsKey);
+    return _deduplicate(savedItems ?? const <String>[]);
+  }
+
+  Future<bool> saveCustomItem(String item) async {
+    final cleanedItem = cleanItemName(item);
+    if (cleanedItem.isEmpty) {
+      return false;
+    }
+
+    final customItems = await loadCustomItems();
+    if (_containsNormalized(DefaultItemCatalog.names, cleanedItem) ||
+        _containsNormalized(customItems, cleanedItem)) {
+      return false;
+    }
+
+    final updatedItems = <String>[
+      ...customItems,
+      cleanedItem,
+    ]..sort((first, second) => _normalize(first).compareTo(_normalize(second)));
+    final preferences = await SharedPreferences.getInstance();
+    await preferences.setStringList(_customItemsKey, updatedItems);
+    return true;
+  }
+
+  List<String> search(
+    String query, {
+    List<String> customItems = const <String>[],
+    int limit = 500,
+  }) {
+    final items = _mergeItems(customItems);
     final normalizedQuery = _normalize(query);
     if (normalizedQuery.isEmpty) {
-      return DefaultItemCatalog.names.take(limit).toList(growable: false);
+      return items.take(limit).toList(growable: false);
     }
 
     final startsWithMatches = <String>[];
     final containsMatches = <String>[];
 
-    for (final item in DefaultItemCatalog.names) {
+    for (final item in items) {
       final normalizedItem = _normalize(item);
       if (normalizedItem.startsWith(normalizedQuery)) {
         startsWithMatches.add(item);
@@ -29,6 +65,49 @@ class ItemSuggestionsService {
       ...startsWithMatches,
       ...containsMatches,
     ].take(limit).toList(growable: false);
+  }
+
+  bool containsItem(
+    String item, {
+    List<String> customItems = const <String>[],
+  }) {
+    final cleanedItem = cleanItemName(item);
+    if (cleanedItem.isEmpty) {
+      return false;
+    }
+
+    return _containsNormalized(_mergeItems(customItems), cleanedItem);
+  }
+
+  String cleanItemName(String value) {
+    return value.trim().replaceAll(RegExp(r'\s+'), ' ');
+  }
+
+  List<String> _mergeItems(List<String> customItems) {
+    return _deduplicate(<String>[...DefaultItemCatalog.names, ...customItems]);
+  }
+
+  List<String> _deduplicate(List<String> items) {
+    final seenItems = <String>{};
+    final uniqueItems = <String>[];
+
+    for (final item in items) {
+      final cleanedItem = cleanItemName(item);
+      if (cleanedItem.isEmpty) {
+        continue;
+      }
+
+      if (seenItems.add(_normalize(cleanedItem))) {
+        uniqueItems.add(cleanedItem);
+      }
+    }
+
+    return uniqueItems;
+  }
+
+  bool _containsNormalized(List<String> items, String item) {
+    final normalizedItem = _normalize(item);
+    return items.any((candidate) => _normalize(candidate) == normalizedItem);
   }
 
   String _normalize(String value) {

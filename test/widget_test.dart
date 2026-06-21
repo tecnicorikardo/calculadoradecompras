@@ -105,7 +105,10 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Itens cadastrados'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey<String>('item-selector-search')),
+      findsOneWidget,
+    );
 
     await tester.enterText(
       find.byKey(const ValueKey<String>('item-selector-search')),
@@ -117,5 +120,49 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Arroz Agulhinha'), findsWidgets);
+  });
+
+  testWidgets('cadastra automaticamente descricao nova nas sugestoes', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    configurePhoneViewport(tester);
+    addTearDown(() => resetViewport(tester));
+
+    await tester.pumpWidget(const QuickSumApp());
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byKey(const ValueKey<String>('description-field')),
+      'Granola Especial',
+    );
+    await tester.tap(
+      find.byKey(const ValueKey<String>('numpad-9')),
+      warnIfMissed: false,
+    );
+    await tester.pump();
+    await tester.tap(
+      find.byKey(const ValueKey<String>('numpad-9')),
+      warnIfMissed: false,
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const ValueKey<String>('numpad-add')),
+      warnIfMissed: false,
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(
+      find.byKey(const ValueKey<String>('item-selector-button')),
+      warnIfMissed: false,
+    );
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const ValueKey<String>('item-selector-search')),
+      'granola',
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Granola Especial'), findsWidgets);
   });
 }

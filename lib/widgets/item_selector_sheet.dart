@@ -7,11 +7,13 @@ class ItemSelectorSheet extends StatefulWidget {
   const ItemSelectorSheet({
     super.key,
     required this.suggestionsService,
+    required this.customItems,
     required this.onItemSelected,
   });
 
   final ItemSuggestionsService suggestionsService;
-  final ValueChanged<String> onItemSelected;
+  final List<String> customItems;
+  final Future<void> Function(String item) onItemSelected;
 
   @override
   State<ItemSelectorSheet> createState() => _ItemSelectorSheetState();
@@ -24,19 +26,61 @@ class _ItemSelectorSheetState extends State<ItemSelectorSheet> {
   @override
   void initState() {
     super.initState();
-    _items = widget.suggestionsService.search('');
+    _items = _searchItems();
     _searchController.addListener(_handleSearchChanged);
+  }
+
+  @override
+  void didUpdateWidget(covariant ItemSelectorSheet oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.customItems != widget.customItems) {
+      _handleSearchChanged();
+    }
   }
 
   void _handleSearchChanged() {
     setState(() {
-      _items = widget.suggestionsService.search(_searchController.text);
+      _items = _searchItems();
     });
   }
 
-  void _selectItem(String item) {
-    widget.onItemSelected(item);
+  List<String> _searchItems() {
+    return widget.suggestionsService.search(
+      _searchController.text,
+      customItems: widget.customItems,
+    );
+  }
+
+  Future<void> _selectItem(String item) async {
+    final cleanedItem = widget.suggestionsService.cleanItemName(item);
+    if (cleanedItem.isEmpty) {
+      return;
+    }
+
+    await widget.onItemSelected(cleanedItem);
+    if (!mounted) {
+      return;
+    }
     Navigator.of(context).pop();
+  }
+
+  void _handleSearchSubmitted(String value) {
+    final cleanedItem = widget.suggestionsService.cleanItemName(value);
+    if (cleanedItem.isEmpty) {
+      return;
+    }
+
+    if (!widget.suggestionsService.containsItem(
+      cleanedItem,
+      customItems: widget.customItems,
+    )) {
+      _selectItem(cleanedItem);
+      return;
+    }
+
+    if (_items.length == 1) {
+      _selectItem(_items.single);
+    }
   }
 
   @override
@@ -88,7 +132,7 @@ class _ItemSelectorSheetState extends State<ItemSelectorSheet> {
                             ),
                             const SizedBox(height: 6),
                             Text(
-                              'Lista recuperada do app de referência.',
+                              'Escolha um item ou digite um novo nome.',
                               style: theme.textTheme.bodyMedium?.copyWith(
                                 color: palette.textSecondary,
                               ),
@@ -113,6 +157,7 @@ class _ItemSelectorSheetState extends State<ItemSelectorSheet> {
                     controller: _searchController,
                     autofocus: true,
                     textInputAction: TextInputAction.search,
+                    onSubmitted: _handleSearchSubmitted,
                     decoration: InputDecoration(
                       hintText: 'Buscar ou adicionar item...',
                       prefixIcon: const Icon(Icons.search_rounded),
@@ -184,7 +229,7 @@ class _EmptySelectorState extends StatelessWidget {
               FilledButton.icon(
                 onPressed: onUseQuery,
                 icon: const Icon(Icons.add_rounded),
-                label: Text('Usar "$normalizedQuery"'),
+                label: Text('Adicionar "$normalizedQuery"'),
               ),
             ],
           ],
