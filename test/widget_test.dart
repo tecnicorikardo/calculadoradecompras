@@ -80,12 +80,12 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.tap(
-      find.byTooltip('Opcoes da lista'),
+      find.byKey(const ValueKey<String>('shopping-list-button')),
       warnIfMissed: false,
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Ver lista'), findsOneWidget);
-    expect(find.text('Compartilhar'), findsOneWidget);
+    expect(find.text('Itens adicionados'), findsOneWidget);
+    expect(find.text('Compartilhar lista'), findsOneWidget);
   });
 }

@@ -22,25 +22,30 @@ class _UpgradeSheetState extends State<UpgradeSheet> {
       _error = null;
     });
 
-    final url = await ProService.instance.createCheckoutUrl();
+    try {
+      final url = await ProService.instance.createCheckoutUrl();
+      final launched = await launchUrl(
+        Uri.parse(url),
+        mode: LaunchMode.externalApplication,
+      );
 
-    if (!mounted) return;
-
-    if (url == null) {
-      setState(() {
-        _loading = false;
-        _error = 'Não foi possível iniciar o pagamento. Tente novamente.';
-      });
-      return;
-    }
-
-    setState(() => _loading = false);
-
-    final uri = Uri.parse(url);
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } else {
-      setState(() => _error = 'Não foi possível abrir o navegador.');
+      if (!launched && mounted) {
+        setState(() => _error = 'Não foi possível abrir o navegador.');
+      }
+    } on CheckoutException catch (error) {
+      if (mounted) {
+        setState(() => _error = error.message);
+      }
+    } catch (error) {
+      if (mounted) {
+        setState(
+          () => _error = 'Não foi possível abrir o pagamento. Tente novamente.',
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _loading = false);
+      }
     }
   }
 
@@ -169,7 +174,9 @@ class _UpgradeSheetState extends State<UpgradeSheet> {
               TextButton(
                 onPressed: () => Navigator.of(context).pop(),
                 child: Text(
-                  ctrl.isTrialActive ? 'Continuar no período gratuito' : 'Fechar',
+                  ctrl.isTrialActive
+                      ? 'Continuar no período gratuito'
+                      : 'Fechar',
                   style: TextStyle(color: palette.textSecondary),
                 ),
               ),

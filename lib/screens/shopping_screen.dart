@@ -313,34 +313,6 @@ class _ShoppingScreenState extends State<ShoppingScreen>
     await _controller.setBudgetLimit(value);
   }
 
-  void _activateBudgetField() {
-    if (!_budgetFocusNode.hasFocus) {
-      _budgetFocusNode.requestFocus();
-    }
-
-    if (_activeAmountField == _AmountFieldTarget.budget &&
-        _budgetError == null) {
-      return;
-    }
-
-    setState(() {
-      _budgetError = null;
-      _activeAmountField = _AmountFieldTarget.budget;
-    });
-  }
-
-  void _handleBudgetChanged(String _) {
-    if (_activeAmountField == _AmountFieldTarget.budget &&
-        _budgetError == null) {
-      return;
-    }
-
-    setState(() {
-      _budgetError = null;
-      _activeAmountField = _AmountFieldTarget.budget;
-    });
-  }
-
   Future<void> _confirmBudgetLimit() async {
     await _applyBudgetLimit();
     if (!mounted) {
@@ -674,7 +646,9 @@ class _ShoppingScreenState extends State<ShoppingScreen>
                         title: 'Limite de Gastos',
                         child: TextField(
                           controller: _budgetController,
-                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
                           onSubmitted: (_) {
                             FocusScope.of(context).unfocus();
                             _confirmBudgetLimit();
@@ -693,7 +667,10 @@ class _ShoppingScreenState extends State<ShoppingScreen>
                               borderSide: BorderSide.none,
                             ),
                             suffixIcon: IconButton(
-                              icon: Icon(Icons.check_rounded, color: palette.accent),
+                              icon: Icon(
+                                Icons.check_rounded,
+                                color: palette.accent,
+                              ),
                               onPressed: () {
                                 FocusScope.of(context).unfocus();
                                 _confirmBudgetLimit();
@@ -771,7 +748,6 @@ class _ShoppingScreenState extends State<ShoppingScreen>
                           value: AppInfo.appName,
                         ),
                       ),
-
                     ],
                   ),
                 ),
@@ -890,14 +866,24 @@ class _ShoppingScreenState extends State<ShoppingScreen>
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         color: palette.accentStrong,
-                        fontSize: tight ? 17 : compact ? 19 : 28,
+                        fontSize: tight
+                            ? 17
+                            : compact
+                            ? 19
+                            : 28,
                         fontWeight: FontWeight.w900,
                         letterSpacing: -0.4,
                       ),
                     ),
                   ),
                   if (_showAlertTitle) ...<Widget>[
-                    SizedBox(width: tight ? 6 : compact ? 8 : 16),
+                    SizedBox(
+                      width: tight
+                          ? 6
+                          : compact
+                          ? 8
+                          : 16,
+                    ),
                     Expanded(
                       child: Text(
                         _budgetAlertHeadline,
@@ -905,7 +891,11 @@ class _ShoppingScreenState extends State<ShoppingScreen>
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           color: alertColor,
-                          fontSize: tight ? 14 : compact ? 16 : 24,
+                          fontSize: tight
+                              ? 14
+                              : compact
+                              ? 16
+                              : 24,
                           fontWeight: FontWeight.w800,
                           letterSpacing: -0.2,
                         ),
@@ -923,16 +913,25 @@ class _ShoppingScreenState extends State<ShoppingScreen>
                 child: GestureDetector(
                   onTap: _showUpgradeSheet,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 5,
+                    ),
                     decoration: BoxDecoration(
                       color: palette.accentSoft,
                       borderRadius: BorderRadius.circular(99),
-                      border: Border.all(color: palette.accent.withValues(alpha: 0.3)),
+                      border: Border.all(
+                        color: palette.accent.withValues(alpha: 0.3),
+                      ),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: <Widget>[
-                        Icon(Icons.workspace_premium_rounded, color: palette.accent, size: 13),
+                        Icon(
+                          Icons.workspace_premium_rounded,
+                          color: palette.accent,
+                          size: 13,
+                        ),
                         const SizedBox(width: 4),
                         Text(
                           '${pro.trialDaysRemaining}d grátis',
@@ -1282,7 +1281,11 @@ class _ShoppingScreenState extends State<ShoppingScreen>
     );
   }
 
-  Widget _buildLastItemCard(bool compact, bool tight, {bool condensed = false}) {
+  Widget _buildLastItemCard(
+    bool compact,
+    bool tight, {
+    bool condensed = false,
+  }) {
     final palette = context.appPalette;
     final lastItem = _controller.lastItem;
 
@@ -1303,7 +1306,8 @@ class _ShoppingScreenState extends State<ShoppingScreen>
     final rawDesc = (lastItem?.description?.trim().isEmpty ?? true)
         ? null
         : lastItem!.description;
-    final rawDescription = rawDesc ?? (lastItem != null ? 'Item' : 'Nenhum item adicionado');
+    final rawDescription =
+        rawDesc ?? (lastItem != null ? 'Item' : 'Nenhum item adicionado');
     final description = (lastItem != null && qty > 1)
         ? '${qty}x $rawDescription'
         : rawDescription;
@@ -1316,8 +1320,8 @@ class _ShoppingScreenState extends State<ShoppingScreen>
     final value = lastItem == null
         ? 'R\$ 0,00'
         : qty > 1
-            ? '$qty x $unitFormatted = $totalFormatted'
-            : unitFormatted;
+        ? '$qty x $unitFormatted = $totalFormatted'
+        : unitFormatted;
     final descriptionColor = lastItem == null
         ? palette.textSecondary
         : palette.textPrimary;
@@ -1353,7 +1357,7 @@ class _ShoppingScreenState extends State<ShoppingScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 Text(
-                  'Ultimo item',
+                  'Ultimo Item',
                   style: TextStyle(
                     color: palette.textSecondary,
                     fontSize: tight ? 9 : 10,
@@ -1731,57 +1735,61 @@ class _ShoppingScreenState extends State<ShoppingScreen>
               : compact
               ? 56
               : 72,
-          child: GestureDetector(
-            onTap: _handleFloatingAction,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: palette.accent,
-                shape: BoxShape.circle,
-                boxShadow: <BoxShadow>[
-                  BoxShadow(
-                    color: palette.accent.withValues(alpha: 0.42),
-                    blurRadius: 16,
-                    offset: Offset(0, 8),
-                  ),
-                ],
-              ),
-              child: Stack(
-                clipBehavior: Clip.none,
-                alignment: Alignment.center,
-                children: <Widget>[
-                  Icon(
-                    Icons.shopping_cart_rounded,
-                    color: palette.accentForeground,
-                    size: tight
-                        ? 20
-                        : compact
-                        ? 24
-                        : 28,
-                  ),
-                  if (_controller.itemCount > 0)
-                    Positioned(
-                      right: tight ? -4 : -6,
-                      top: tight ? -2 : -4,
-                      child: Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: tight ? 5 : 6,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: palette.badge,
-                          borderRadius: BorderRadius.circular(99),
-                        ),
-                        child: Text(
-                          '${_controller.itemCount}',
-                          style: TextStyle(
-                            color: palette.surfaceSheet,
-                            fontSize: tight ? 9 : 11,
-                            fontWeight: FontWeight.w800,
+          child: Tooltip(
+            message: 'Opcoes da lista',
+            child: GestureDetector(
+              key: const ValueKey<String>('shopping-list-button'),
+              onTap: _handleFloatingAction,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: palette.accent,
+                  shape: BoxShape.circle,
+                  boxShadow: <BoxShadow>[
+                    BoxShadow(
+                      color: palette.accent.withValues(alpha: 0.42),
+                      blurRadius: 16,
+                      offset: Offset(0, 8),
+                    ),
+                  ],
+                ),
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  alignment: Alignment.center,
+                  children: <Widget>[
+                    Icon(
+                      Icons.shopping_cart_rounded,
+                      color: palette.accentForeground,
+                      size: tight
+                          ? 20
+                          : compact
+                          ? 24
+                          : 28,
+                    ),
+                    if (_controller.itemCount > 0)
+                      Positioned(
+                        right: tight ? -4 : -6,
+                        top: tight ? -2 : -4,
+                        child: Container(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: tight ? 5 : 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: palette.badge,
+                            borderRadius: BorderRadius.circular(99),
+                          ),
+                          child: Text(
+                            '${_controller.itemCount}',
+                            style: TextStyle(
+                              color: palette.surfaceSheet,
+                              fontSize: tight ? 9 : 11,
+                              fontWeight: FontWeight.w800,
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -2007,8 +2015,7 @@ class _ShoppingScreenState extends State<ShoppingScreen>
                                       flex: totalFlex,
                                       child: _buildTotalCard(compact, tight),
                                     ),
-                                  if (!splitSummaryCards)
-                                    SizedBox(height: gap),
+                                  if (!splitSummaryCards) SizedBox(height: gap),
                                   // Last item card — flex 2
                                   if (!splitSummaryCards)
                                     Expanded(

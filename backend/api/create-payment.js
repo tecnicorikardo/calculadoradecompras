@@ -1,4 +1,9 @@
-const MP_ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN;
+const {
+  ConfigurationError,
+  getBackendUrl,
+  requireEnvironmentVariable,
+} = require('../lib/config');
+const { getDeviceId, getRequestBody } = require('../lib/request');
 
 module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -13,49 +18,85 @@ module.exports = async (req, res) => {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { device_id } = req.body;
-  if (!device_id) {
+  const requestBody = getRequestBody(req);
+  const deviceId = getDeviceId(requestBody.device_id);
+  if (!deviceId) {
     return res.status(400).json({ error: 'Missing device_id' });
   }
 
-  const baseUrl = 'https://tecnicorikardo.github.io/calculadoradecompras';
+  try {
+    const accessToken = requireEnvironmentVariable('MP_ACCESS_TOKEN');
+    const backendUrl = getBackendUrl();
+    const pagesUrl = 'https://tecnicorikardo.github.io/calculadoradecompras';
 
-  const body = {
-    items: [
-      {
-        id: 'soma_facil_pro',
-        title: 'Soma Fácil PRO — Vitalício',
-        description: 'Acesso vitalício ao Soma Fácil sem anúncios',
-        quantity: 1,
-        currency_id: 'BRL',
-        unit_price: 10.0,
+    const body = {
+      items: [
+        {
+          id: 'soma_facil_pro',
+          title: 'Soma Fácil PRO — Vitalício',
+          description: 'Acesso vitalício ao Soma Fácil sem anúncios',
+          quantity: 1,
+          currency_id: 'BRL',
+          unit_price: 10.0,
+        },
+      ],
+      external_reference: deviceId,
+      back_urls: {
+        success: `${pagesUrl}/pro-success.html`,
+        failure: `${pagesUrl}/pro-failure.html`,
+        pending: `${pagesUrl}/pro-pending.html`,
       },
-    ],
-    external_reference: device_id,
-    back_urls: {
-      success: `${baseUrl}/pro-success.html`,
-      failure: `${baseUrl}/pro-failure.html`,
-      pending: `${baseUrl}/pro-pending.html`,
-    },
-    auto_return: 'approved',
-    notification_url: 'https://calculadora-pro.vercel.app/api/webhook',
-  };
+      auto_return: 'approved',
+      notification_url: `${backendUrl}/api/webhook`,
+    };
 
-  const mpRes = await fetch('https://api.mercadopago.com/checkout/preferences', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${MP_ACCESS_TOKEN}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(body),
-  });
+    const mercadoPagoResponse = await fetch(
+      'https://api.mercadopago.com/checkout/preferences',
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+      },
+    );
 
-  if (!mpRes.ok) {
-    const err = await mpRes.text();
-    console.error('MP error:', err);
-    return res.status(500).json({ error: 'Failed to create preference' });
+    if (!mercadoPagoResponse.ok) {
+      const errorBody = await mercadoPagoResponse.text();
+      console.error(
+        `Mercado Pago preference error (${mercadoPagoResponse.status}):`,
+        errorBody,
+      );
+      return res.status(502).json({
+        code: 'payment_provider_error',
+        error: 'Failed to create preference',
+      });
+    }
+
+    const preference = await mercadoPagoResponse.json();
+    if (typeof preference.init_point !== 'string') {
+      console.error('Mercado Pago response does not contain init_point');
+      return res.status(502).json({
+        code: 'invalid_payment_response',
+        error: 'Invalid payment provider response',
+      });
+    }
+
+    return res.status(200).json({ checkout_url: preference.init_point });
+  } catch (error) {
+    if (error instanceof ConfigurationError) {
+      console.error(error.message);
+      return res.status(503).json({
+        code: 'configuration_error',
+        error: 'Payment service is not configured',
+      });
+    }
+
+    console.error('Create payment error:', error);
+    return res.status(500).json({
+      code: 'internal_error',
+      error: 'Internal error',
+    });
   }
-
-  const preference = await mpRes.json();
-  return res.status(200).json({ checkout_url: preference.init_point });
 };
