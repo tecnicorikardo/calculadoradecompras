@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter/services.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 
 import '../controllers/pro_controller.dart';
 import '../core/theme/app_palette.dart';
@@ -15,6 +18,15 @@ class UpgradeSheet extends StatefulWidget {
 class _UpgradeSheetState extends State<UpgradeSheet> {
   bool _loading = false;
   String? _error;
+  Map<String, String>? _pixData;
+  Timer? _pollTimer;
+  bool _checkingPayment = false;
+
+  @override
+  void dispose() {
+    _pollTimer?.cancel();
+    super.dispose();
+  }
 
   Future<void> _handleBuy() async {
     setState(() {
@@ -23,28 +35,67 @@ class _UpgradeSheetState extends State<UpgradeSheet> {
     });
 
     try {
-      final url = await ProService.instance.createCheckoutUrl();
-      final launched = await launchUrl(
-        Uri.parse(url),
-        mode: LaunchMode.externalApplication,
-      );
-
-      if (!launched && mounted) {
-        setState(() => _error = 'Não foi possível abrir o navegador.');
+      final pixData = await ProService.instance.createPixPayment();
+      if (mounted) {
+        setState(() {
+          _pixData = pixData;
+          _loading = false;
+        });
+        _startPaymentPolling();
       }
     } on CheckoutException catch (error) {
       if (mounted) {
-        setState(() => _error = error.message);
+        setState(() {
+          _error = error.message;
+          _loading = false;
+        });
       }
     } catch (error) {
       if (mounted) {
-        setState(
-          () => _error = 'Não foi possível abrir o pagamento. Tente novamente.',
-        );
+        setState(() {
+          _error = 'Não foi possível gerar o Pix. Tente novamente.';
+          _loading = false;
+        });
       }
-    } finally {
+    }
+  }
+
+  void _startPaymentPolling() {
+    _pollTimer = Timer.periodic(const Duration(seconds: 3), (timer) async {
+      if (_checkingPayment) return;
+      _checkingPayment = true;
+
+      try {
+        final isPro = await ProService.instance.isPro();
+        if (isPro && mounted) {
+          timer.cancel();
+          await ProController.instance.activatePro();
+          if (mounted) {
+            Navigator.of(context).pop();
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Pagamento confirmado! Você agora é PRO! 🎉'),
+                backgroundColor: Colors.green,
+              ),
+            );
+          }
+        }
+      } finally {
+        _checkingPayment = false;
+      }
+    });
+  }
+
+  Future<void> _copyPixCode() async {
+    if (_pixData?['qrcode'] != null) {
+      await Clipboard.setData(ClipboardData(text: _pixData!['qrcode']!));
       if (mounted) {
-        setState(() => _loading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Código Pix copiado!'),
+            duration: Duration(seconds: 2),
+          ),
+        );
       }
     }
   }
@@ -55,6 +106,118 @@ class _UpgradeSheetState extends State<UpgradeSheet> {
     final palette = context.appPalette;
     final ctrl = ProController.instance;
 
+    // Se já tem os dados do Pix, mostra o QR Code
+    if (_pixData != null) {
+      return Container(
+        decoration: BoxDecoration(
+          color: palette.surfaceSheet,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
+        ),
+        child: SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Container(
+                  width: 46,
+                  height: 5,
+                  decoration: BoxDecoration(
+                    color: palette.handle,
+                    borderRadius: BorderRadius.circular(99),
+                  ),
+                ),
+                const SizedBox(height: 28),
+                Text(
+                  'Escaneie o QR Code',
+                  style: theme.textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Use o app do seu banco para pagar',
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: palette.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                // QR Code
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: QrImageView(
+                    data: _pixData!['qrcode']!,
+                    version: QrVersions.auto,
+                    size: 220,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  'Valor: R\$ 10,00',
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: palette.accent,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                // Botão copiar código
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: _copyPixCode,
+                    icon: const Icon(Icons.copy_rounded),
+                    label: const Text('Copiar código Pix'),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: <Widget>[
+                    const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                    const SizedBox(width: 10),
+                    Text(
+                      'Aguardando pagamento...',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: palette.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                TextButton(
+                  onPressed: () {
+                    _pollTimer?.cancel();
+                    Navigator.of(context).pop();
+                  },
+                  child: Text(
+                    'Cancelar',
+                    style: TextStyle(color: palette.textSecondary),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    // Tela inicial antes de gerar o Pix
     return Container(
       decoration: BoxDecoration(
         color: palette.surfaceSheet,

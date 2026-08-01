@@ -1,9 +1,5 @@
-const {
-  ConfigurationError,
-  getBackendUrl,
-  requireEnvironmentVariable,
-} = require('../lib/config');
-const { getDeviceId, getRequestBody } = require('../lib/request');
+const https = require('https');
+const fs = require('fs');
 
 module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -18,85 +14,71 @@ module.exports = async (req, res) => {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const requestBody = getRequestBody(req);
-  const deviceId = getDeviceId(requestBody.device_id);
-  if (!deviceId) {
+  const { device_id } = req.body;
+  if (!device_id) {
     return res.status(400).json({ error: 'Missing device_id' });
   }
 
   try {
-    const accessToken = requireEnvironmentVariable('MP_ACCESS_TOKEN');
-    const backendUrl = getBackendUrl();
-    const pagesUrl = 'https://tecnicorikardo.github.io/calculadoradecompras';
+    // Autentica na EFI
+    const { getEfiToken } = require('./auth-efi');
+    const token = await getEfiToken();
 
-    const body = {
-      items: [
-        {
-          id: 'soma_facil_pro',
-          title: 'Soma Fácil PRO — Vitalício',
-          description: 'Acesso vitalício ao Soma Fácil sem anúncios',
-          quantity: 1,
-          currency_id: 'BRL',
-          unit_price: 10.0,
-        },
+    // Cria cobrança Pix
+    const txid = `somafacil${Date.now()}`;
+    const certPath = process.env.EFI_CERT_PATH || './producao-918763-somafacil.p12';
+    const cert = fs.readFileSync(certPath);
+
+    const body = JSON.stringify({
+      calendario: { expiracao: 3600 },
+      devedor: { nome: 'Cliente Soma Facil' },
+      valor: { original: '10.00' },
+      chave: process.env.EFI_PIX_KEY,
+      solicitacaoPagador: device_id,
+      infoAdicionais: [
+        { nome: 'Produto', valor: 'Soma Facil PRO Vitalicio' },
       ],
-      external_reference: deviceId,
-      back_urls: {
-        success: `${pagesUrl}/pro-success.html`,
-        failure: `${pagesUrl}/pro-failure.html`,
-        pending: `${pagesUrl}/pro-pending.html`,
-      },
-      auto_return: 'approved',
-      notification_url: `${backendUrl}/api/webhook`,
-    };
-
-    const mercadoPagoResponse = await fetch(
-      'https://api.mercadopago.com/checkout/preferences',
-      {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(body),
-      },
-    );
-
-    if (!mercadoPagoResponse.ok) {
-      const errorBody = await mercadoPagoResponse.text();
-      console.error(
-        `Mercado Pago preference error (${mercadoPagoResponse.status}):`,
-        errorBody,
-      );
-      return res.status(502).json({
-        code: 'payment_provider_error',
-        error: 'Failed to create preference',
-      });
-    }
-
-    const preference = await mercadoPagoResponse.json();
-    if (typeof preference.init_point !== 'string') {
-      console.error('Mercado Pago response does not contain init_point');
-      return res.status(502).json({
-        code: 'invalid_payment_response',
-        error: 'Invalid payment provider response',
-      });
-    }
-
-    return res.status(200).json({ checkout_url: preference.init_point });
-  } catch (error) {
-    if (error instanceof ConfigurationError) {
-      console.error(error.message);
-      return res.status(503).json({
-        code: 'configuration_error',
-        error: 'Payment service is not configured',
-      });
-    }
-
-    console.error('Create payment error:', error);
-    return res.status(500).json({
-      code: 'internal_error',
-      error: 'Internal error',
     });
+
+    const pixResponse = await new Promise((resolve, reject) => {
+      const options = {
+        hostname: 'api-pix.gerencianet.com.br',
+        port: 443,
+        path: `/v2/cob/${txid}`,
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(body),
+        },
+        pfx: cert,
+        passphrase: process.env.EFI_CERT_PASSWORD || '',
+      };
+
+      const req = https.request(options, (res) => {
+        let data = '';
+        res.on('data', (chunk) => data += chunk);
+        res.on('end', () => resolve({ status: res.statusCode, body: data }));
+      });
+
+      req.on('error', reject);
+      req.write(body);
+      req.end();
+    });
+
+    if (pixResponse.status !== 201 && pixResponse.status !== 200) {
+      console.error('EFI error:', pixResponse.body);
+      return res.status(500).json({ error: 'Failed to create Pix charge' });
+    }
+
+    const cobranca = JSON.parse(pixResponse.body);
+    return res.status(200).json({
+      qrcode: cobranca.pixCopiaECola,
+      qrcode_image: cobranca.location,
+      txid: cobranca.txid,
+    });
+  } catch (err) {
+    console.error('Payment creation error:', err);
+    return res.status(500).json({ error: err.message });
   }
 };

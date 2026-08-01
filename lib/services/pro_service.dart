@@ -114,8 +114,8 @@ class ProService {
     }
   }
 
-  /// Cria preferência de pagamento e retorna a URL do checkout
-  Future<String> createCheckoutUrl() async {
+  /// Cria cobrança Pix e retorna o QR Code
+  Future<Map<String, String>> createPixPayment() async {
     HttpClient? client;
     try {
       final deviceId = await getDeviceId();
@@ -129,54 +129,37 @@ class ProService {
 
       final responseJson = jsonDecode(body) as Map<String, dynamic>;
       if (response.statusCode != HttpStatus.ok) {
-        final errorCode = responseJson['code'] as String?;
         debugPrint(
-          'ProService.createCheckoutUrl HTTP ${response.statusCode}: $body',
+          'ProService.createPixPayment HTTP ${response.statusCode}: $body',
         );
 
-        if (errorCode == 'configuration_error') {
-          throw const CheckoutException(
-            'O pagamento está temporariamente indisponível. '
-            'Tente novamente mais tarde.',
-          );
-        }
-
         throw const CheckoutException(
-          'O Mercado Pago não conseguiu iniciar a compra. '
-          'Tente novamente em alguns instantes.',
+          'Não foi possível gerar o Pix. Tente novamente em alguns instantes.',
         );
       }
 
-      final checkoutUrl = responseJson['checkout_url'];
-      final checkoutUri = checkoutUrl is String
-          ? Uri.tryParse(checkoutUrl)
-          : null;
-      if (checkoutUri == null ||
-          !checkoutUri.hasScheme ||
-          checkoutUri.host.isEmpty) {
-        throw const CheckoutException(
-          'O serviço de pagamento retornou uma resposta inválida.',
-        );
-      }
-
-      return checkoutUrl;
+      return {
+        'qrcode': responseJson['qrcode'] as String,
+        'qrcode_image': responseJson['qrcode_image'] as String? ?? '',
+        'txid': responseJson['txid'] as String,
+      };
     } on CheckoutException {
       rethrow;
     } on SocketException catch (error) {
-      debugPrint('ProService.createCheckoutUrl network error: $error');
+      debugPrint('ProService.createPixPayment network error: $error');
       throw const CheckoutException(
         'Não foi possível conectar ao serviço de pagamento. '
         'Verifique sua internet.',
       );
     } on TimeoutException catch (error) {
-      debugPrint('ProService.createCheckoutUrl timeout: $error');
+      debugPrint('ProService.createPixPayment timeout: $error');
       throw const CheckoutException(
         'O serviço de pagamento demorou para responder. Tente novamente.',
       );
     } catch (e) {
-      debugPrint('ProService.createCheckoutUrl error: $e');
+      debugPrint('ProService.createPixPayment error: $e');
       throw const CheckoutException(
-        'Não foi possível iniciar o pagamento. Tente novamente.',
+        'Não foi possível gerar o Pix. Tente novamente.',
       );
     } finally {
       client?.close();
