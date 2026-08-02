@@ -1,5 +1,6 @@
 const https = require('https');
 const fs = require('fs');
+const path = require('path');
 
 module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -26,8 +27,15 @@ module.exports = async (req, res) => {
 
     // Cria cobrança Pix
     const txid = `somafacil${Date.now()}`;
-    const certPath = process.env.EFI_CERT_PATH || './producao-918763-somafacil.p12';
-    const cert = fs.readFileSync(certPath);
+    
+    // Obtém certificado (prioriza base64)
+    let cert;
+    if (process.env.EFI_CERT_BASE64) {
+      cert = Buffer.from(process.env.EFI_CERT_BASE64, 'base64');
+    } else {
+      const certPath = process.env.EFI_CERT_PATH || 'producao-918763-somafacil.p12';
+      cert = fs.readFileSync(certPath);
+    }
 
     const body = JSON.stringify({
       calendario: { expiracao: 3600 },
@@ -41,8 +49,9 @@ module.exports = async (req, res) => {
     });
 
     const pixResponse = await new Promise((resolve, reject) => {
+      const certPassword = process.env.EFI_CERT_PASSWORD;
       const options = {
-        hostname: 'api-pix.gerencianet.com.br',
+        hostname: 'pix.api.efipay.com.br',
         port: 443,
         path: `/v2/cob/${txid}`,
         method: 'PUT',
@@ -52,8 +61,12 @@ module.exports = async (req, res) => {
           'Content-Length': Buffer.byteLength(body),
         },
         pfx: cert,
-        passphrase: process.env.EFI_CERT_PASSWORD || '',
       };
+
+      // Só adiciona passphrase se realmente tiver valor
+      if (certPassword && certPassword !== '') {
+        options.passphrase = certPassword;
+      }
 
       const req = https.request(options, (res) => {
         let data = '';

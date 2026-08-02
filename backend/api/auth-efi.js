@@ -52,7 +52,7 @@ async function getEfiToken() {
   return new Promise((resolve, reject) => {
     const certPassword = process.env.EFI_CERT_PASSWORD;
     const options = {
-      hostname: 'api-pix.gerencianet.com.br',
+      hostname: 'pix.api.efipay.com.br',
       port: 443,
       path: '/oauth/token',
       method: 'POST',
