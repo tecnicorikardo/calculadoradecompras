@@ -13,36 +13,39 @@ async function getEfiToken() {
 
   const clientId = process.env.EFI_CLIENT_ID;
   const clientSecret = process.env.EFI_CLIENT_SECRET;
-  const certFilename = process.env.EFI_CERT_PATH || 'producao-918763-somafacil.p12';
   
-  // Tenta vários caminhos possíveis para o certificado
-  const possiblePaths = [
-    certFilename,
-    path.join(process.cwd(), certFilename),
-    path.join(__dirname, '..', certFilename),
-    path.join('/var/task', certFilename),
-  ];
-
   let cert;
-  let certPath;
   
-  for (const tryPath of possiblePaths) {
-    try {
-      if (fs.existsSync(tryPath)) {
-        cert = fs.readFileSync(tryPath);
-        certPath = tryPath;
-        break;
+  // Prioridade 1: Usar certificado em base64 da variável de ambiente
+  if (process.env.EFI_CERT_BASE64) {
+    cert = Buffer.from(process.env.EFI_CERT_BASE64, 'base64');
+    console.log('Using certificate from EFI_CERT_BASE64 environment variable');
+  } else {
+    // Prioridade 2: Tentar ler do arquivo
+    const certFilename = process.env.EFI_CERT_PATH || 'producao-918763-somafacil.p12';
+    const possiblePaths = [
+      certFilename,
+      path.join(process.cwd(), certFilename),
+      path.join(__dirname, '..', certFilename),
+      path.join('/var/task', certFilename),
+    ];
+
+    for (const tryPath of possiblePaths) {
+      try {
+        if (fs.existsSync(tryPath)) {
+          cert = fs.readFileSync(tryPath);
+          console.log(`Using certificate from file: ${tryPath}`);
+          break;
+        }
+      } catch (e) {
+        // Continua tentando outros caminhos
       }
-    } catch (e) {
-      // Continua tentando outros caminhos
+    }
+
+    if (!cert) {
+      throw new Error(`Certificate not found. Set EFI_CERT_BASE64 env var or place file at: ${possiblePaths.join(', ')}`);
     }
   }
-
-  if (!cert) {
-    throw new Error(`Certificate not found. Tried paths: ${possiblePaths.join(', ')}`);
-  }
-
-  console.log(`Using certificate from: ${certPath}`);
   
   const credentials = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
 
