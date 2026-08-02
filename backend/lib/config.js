@@ -42,7 +42,7 @@ function getBackendUrl(environment = process.env) {
 
 function getConfigurationStatus(environment = process.env) {
   return {
-    efi: isConfigured(environment.EFI_CLIENT_ID) && isConfigured(environment.EFI_CLIENT_SECRET),
+    asaas: isConfigured(environment.ASAAS_API_KEY),
     supabaseUrl: isConfigured(environment.SUPABASE_URL),
     supabaseServiceKey: isConfigured(environment.SUPABASE_SERVICE_KEY),
   };

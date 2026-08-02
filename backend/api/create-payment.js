@@ -1,6 +1,4 @@
 const https = require('https');
-const fs = require('fs');
-const path = require('path');
 
 module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -21,77 +19,81 @@ module.exports = async (req, res) => {
   }
 
   try {
-    // Autentica na EFI
-    const { getEfiToken } = require('./auth-efi');
-    const token = await getEfiToken();
-
-    // Cria cobrança Pix
-    const txid = `somafacil${Date.now()}`;
-    
-    // Obtém certificado (prioriza base64)
-    let cert;
-    if (process.env.EFI_CERT_BASE64) {
-      cert = Buffer.from(process.env.EFI_CERT_BASE64, 'base64');
-    } else {
-      const certPath = process.env.EFI_CERT_PATH || 'producao-918763-somafacil.p12';
-      cert = fs.readFileSync(certPath);
+    const apiKey = process.env.ASAAS_API_KEY;
+    if (!apiKey) {
+      throw new Error('ASAAS_API_KEY not configured');
     }
 
-    const body = JSON.stringify({
-      calendario: { expiracao: 3600 },
-      devedor: { nome: 'Cliente Soma Facil' },
-      valor: { original: '10.00' },
-      chave: process.env.EFI_PIX_KEY,
-      solicitacaoPagador: device_id,
-      infoAdicionais: [
-        { nome: 'Produto', valor: 'Soma Facil PRO Vitalicio' },
-      ],
+    // 1. Criar cliente (opcional, mas recomendado)
+    const customerName = `Cliente ${device_id.substring(0, 8)}`;
+    const customerBody = JSON.stringify({
+      name: customerName,
+      cpfCnpj: '00000000000', // CPF fictício, ajuste se necessário
+      mobilePhone: '00000000000',
+      notificationDisabled: true,
     });
 
-    const pixResponse = await new Promise((resolve, reject) => {
-      const certPassword = process.env.EFI_CERT_PASSWORD;
-      const options = {
-        hostname: 'pix.api.efipay.com.br',
-        port: 443,
-        path: `/v2/cob/${txid}`,
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-          'Content-Length': Buffer.byteLength(body),
-        },
-        pfx: cert,
-      };
+    const customer = await makeAsaasRequest('/v3/customers', 'POST', apiKey, customerBody);
 
-      // Só adiciona passphrase se realmente tiver valor
-      if (certPassword && certPassword !== '') {
-        options.passphrase = certPassword;
-      }
-
-      const req = https.request(options, (res) => {
-        let data = '';
-        res.on('data', (chunk) => data += chunk);
-        res.on('end', () => resolve({ status: res.statusCode, body: data }));
-      });
-
-      req.on('error', reject);
-      req.write(body);
-      req.end();
+    // 2. Criar cobrança Pix
+    const paymentBody = JSON.stringify({
+      customer: customer.id,
+      billingType: 'PIX',
+      value: 10.00,
+      dueDate: new Date().toISOString().split('T')[0], // hoje
+      description: `Soma Facil PRO - ${device_id}`,
+      externalReference: device_id,
     });
 
-    if (pixResponse.status !== 201 && pixResponse.status !== 200) {
-      console.error('EFI error:', pixResponse.body);
-      return res.status(500).json({ error: 'Failed to create Pix charge' });
-    }
+    const payment = await makeAsaasRequest('/v3/payments', 'POST', apiKey, paymentBody);
 
-    const cobranca = JSON.parse(pixResponse.body);
+    // 3. Pegar QR Code
+    const qrCode = await makeAsaasRequest(`/v3/payments/${payment.id}/pixQrCode`, 'GET', apiKey);
+
     return res.status(200).json({
-      qrcode: cobranca.pixCopiaECola,
-      qrcode_image: cobranca.location,
-      txid: cobranca.txid,
+      qrcode: qrCode.payload,
+      qrcode_image: qrCode.encodedImage,
+      txid: payment.id,
     });
   } catch (err) {
     console.error('Payment creation error:', err);
     return res.status(500).json({ error: err.message });
   }
 };
+
+async function makeAsaasRequest(path, method, apiKey, body = null) {
+  return new Promise((resolve, reject) => {
+    const options = {
+      hostname: 'api.asaas.com',
+      port: 443,
+      path: path,
+      method: method,
+      headers: {
+        'access_token': apiKey,
+        'Content-Type': 'application/json',
+      },
+    };
+
+    if (body) {
+      options.headers['Content-Length'] = Buffer.byteLength(body);
+    }
+
+    const req = https.request(options, (res) => {
+      let data = '';
+      res.on('data', (chunk) => data += chunk);
+      res.on('end', () => {
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          resolve(JSON.parse(data));
+        } else {
+          reject(new Error(`Asaas API error: ${res.statusCode} ${data}`));
+        }
+      });
+    });
+
+    req.on('error', reject);
+    if (body) {
+      req.write(body);
+    }
+    req.end();
+  });
+}

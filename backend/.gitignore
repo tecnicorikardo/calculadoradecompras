@@ -1,1 +1,4 @@
-.vercel
+.env
+*.p12
+node_modules/
+.vercel/
