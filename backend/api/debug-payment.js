@@ -12,6 +12,7 @@ module.exports = async (req, res) => {
       EFI_PIX_KEY: process.env.EFI_PIX_KEY || 'NOT SET',
       EFI_CERT_PASSWORD: process.env.EFI_CERT_PASSWORD === '' ? 'EMPTY (correct)' : (process.env.EFI_CERT_PASSWORD ? 'SET' : 'NOT SET'),
       EFI_CERT_PATH: process.env.EFI_CERT_PATH || './producao-918763-somafacil.p12',
+      EFI_CERT_BASE64: process.env.EFI_CERT_BASE64 ? `SET (${process.env.EFI_CERT_BASE64.length} chars)` : 'NOT SET',
     },
   };
 
