@@ -19,41 +19,67 @@ module.exports = async (req, res) => {
   }
 
   try {
-    const apiKey = process.env.ASAAS_API_KEY;
+    const apiKey = process.env.PAGARME_API_KEY;
     if (!apiKey) {
-      throw new Error('ASAAS_API_KEY not configured');
+      throw new Error('PAGARME_API_KEY not configured');
     }
 
-    // 1. Criar cliente (opcional, mas recomendado)
-    const customerName = `Cliente ${device_id.substring(0, 8)}`;
-    const customerBody = JSON.stringify({
-      name: customerName,
-      cpfCnpj: '00000000000', // CPF fictício, ajuste se necessário
-      mobilePhone: '00000000000',
-      notificationDisabled: true,
+    // Criar pedido com Pix
+    const orderBody = JSON.stringify({
+      items: [
+        {
+          amount: 1000, // R$ 10,00 em centavos
+          description: 'Soma Facil PRO - Acesso Vitalício',
+          quantity: 1,
+          code: device_id, // Usar device_id como código do item
+        }
+      ],
+      customer: {
+        name: `Cliente ${device_id.substring(0, 8)}`,
+        email: `${device_id.substring(0, 12)}@somafacil.app`,
+        type: 'individual',
+        document: '00000000000', // CPF genérico
+        phones: {
+          home_phone: {
+            country_code: '55',
+            number: '000000000',
+            area_code: '11'
+          }
+        }
+      },
+      payments: [
+        {
+          payment_method: 'pix',
+          pix: {
+            expires_in: 3600, // 1 hora em segundos
+            additional_information: [
+              {
+                name: 'device_id',
+                value: device_id
+              }
+            ]
+          }
+        }
+      ],
+      metadata: {
+        device_id: device_id // Salvar device_id no metadata para o webhook
+      }
     });
 
-    const customer = await makeAsaasRequest('/v3/customers', 'POST', apiKey, customerBody);
+    const order = await makePagarmeRequest('/core/v5/orders', 'POST', apiKey, orderBody);
 
-    // 2. Criar cobrança Pix
-    const paymentBody = JSON.stringify({
-      customer: customer.id,
-      billingType: 'PIX',
-      value: 10.00,
-      dueDate: new Date().toISOString().split('T')[0], // hoje
-      description: `Soma Facil PRO - ${device_id}`,
-      externalReference: device_id,
-    });
+    // Extrair dados do Pix da resposta
+    const charge = order.charges && order.charges[0];
+    if (!charge || !charge.last_transaction) {
+      throw new Error('Pix charge not found in order response');
+    }
 
-    const payment = await makeAsaasRequest('/v3/payments', 'POST', apiKey, paymentBody);
-
-    // 3. Pegar QR Code
-    const qrCode = await makeAsaasRequest(`/v3/payments/${payment.id}/pixQrCode`, 'GET', apiKey);
-
+    const pixData = charge.last_transaction;
+    
     return res.status(200).json({
-      qrcode: qrCode.payload,
-      qrcode_image: qrCode.encodedImage,
-      txid: payment.id,
+      qrcode: pixData.qr_code || '',
+      qrcode_image: pixData.qr_code_url || '',
+      txid: order.id,
     });
   } catch (err) {
     console.error('Payment creation error:', err);
@@ -61,15 +87,18 @@ module.exports = async (req, res) => {
   }
 };
 
-async function makeAsaasRequest(path, method, apiKey, body = null) {
+async function makePagarmeRequest(path, method, apiKey, body = null) {
   return new Promise((resolve, reject) => {
+    // Basic Auth: apiKey como username, senha vazia
+    const authString = Buffer.from(`${apiKey}:`).toString('base64');
+    
     const options = {
-      hostname: 'api.asaas.com',
+      hostname: 'api.pagar.me',
       port: 443,
       path: path,
       method: method,
       headers: {
-        'access_token': apiKey,
+        'Authorization': `Basic ${authString}`,
         'Content-Type': 'application/json',
       },
     };
@@ -85,7 +114,7 @@ async function makeAsaasRequest(path, method, apiKey, body = null) {
         if (res.statusCode >= 200 && res.statusCode < 300) {
           resolve(JSON.parse(data));
         } else {
-          reject(new Error(`Asaas API error: ${res.statusCode} ${data}`));
+          reject(new Error(`Pagar.me API error: ${res.statusCode} - ${data}`));
         }
       });
     });

@@ -42,7 +42,7 @@ function getBackendUrl(environment = process.env) {
 
 function getConfigurationStatus(environment = process.env) {
   return {
-    asaas: isConfigured(environment.ASAAS_API_KEY),
+    pagarme: isConfigured(environment.PAGARME_API_KEY),
     supabaseUrl: isConfigured(environment.SUPABASE_URL),
     supabaseServiceKey: isConfigured(environment.SUPABASE_SERVICE_KEY),
   };
