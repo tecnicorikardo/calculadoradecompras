@@ -42,7 +42,7 @@ function getBackendUrl(environment = process.env) {
 
 function getConfigurationStatus(environment = process.env) {
   return {
-    mercadoPago: isConfigured(environment.MP_ACCESS_TOKEN),
+    efi: isConfigured(environment.EFI_CLIENT_ID) && isConfigured(environment.EFI_CLIENT_SECRET),
     supabaseUrl: isConfigured(environment.SUPABASE_URL),
     supabaseServiceKey: isConfigured(environment.SUPABASE_SERVICE_KEY),
   };
