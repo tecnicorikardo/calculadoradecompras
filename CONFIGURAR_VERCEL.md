@@ -1,153 +1,131 @@
-# ⚠️ URGENTE: Configurar Variáveis de Ambiente na Vercel
+# 🔧 Configurar Variáveis na Vercel
 
-## O erro que você viu significa que as variáveis de ambiente não estão configuradas!
+## 1️⃣ Acessar Configurações
 
-Siga estes passos **EXATAMENTE**:
+1. Abra: **https://vercel.com/rikardomartin/calculadora-pro**
+2. Clique na aba **Settings**
+3. No menu lateral, clique em **Environment Variables**
 
----
+## 2️⃣ Remover Variáveis Antigas (IMPORTANTE!)
 
-## Passo 1: Acessar Configurações do Projeto
+Clique no **X** ou **Delete** para remover estas variáveis:
 
-1. Acesse: https://vercel.com/ricardos-projects-6af5d6cb/calculadora-pro/settings/environment-variables
+- ❌ `ASAAS_API_KEY`
+- ❌ `EFI_CLIENT_ID`
+- ❌ `EFI_CLIENT_SECRET`
+- ❌ `EFI_PIX_KEY`
+- ❌ `EFI_CERT_PASSWORD`
+- ❌ `EFI_CERT_PATH`
+- ❌ `EFI_CERT_BASE64`
 
-2. OU navegue manualmente:
-   - Vá em https://vercel.com
-   - Clique no projeto **calculadora-pro**
-   - Clique em **Settings** (no topo)
-   - Clique em **Environment Variables** (menu lateral esquerdo)
+## 3️⃣ Adicionar Nova Variável
 
----
-
-## Passo 2: Adicionar as Variáveis (uma por uma)
-
-Clique em **Add New** e adicione cada variável abaixo:
-
-### Variável 1: EFI_CLIENT_ID
-- **Name**: `EFI_CLIENT_ID`
-- **Value**: `f3d9a3e99b4921ca027d5752473d530f0763f46c`
-- **Environment**: ☑ Production ☑ Preview ☑ Development
-- Clique em **Save**
-
-### Variável 2: EFI_CLIENT_SECRET
-- **Name**: `EFI_CLIENT_SECRET`
-- **Value**: `c4a8a472b03a0ee2c30f9bf4a881b3c6ffaa8d55`
-- **Environment**: ☑ Production ☑ Preview ☑ Development
-- Clique em **Save**
-
-### Variável 3: EFI_PIX_KEY
-- **Name**: `EFI_PIX_KEY`
-- **Value**: `rikardomartinssantos@gmail.com`
-- **Environment**: ☑ Production ☑ Preview ☑ Development
-- Clique em **Save**
-
-### Variável 4: EFI_CERT_PASSWORD
-- **Name**: `EFI_CERT_PASSWORD`
-- **Value**: (deixe VAZIO - não coloque nada)
-- **Environment**: ☑ Production ☑ Preview ☑ Development
-- Clique em **Save**
-
-### Variável 5: SUPABASE_URL
-- **Name**: `SUPABASE_URL`
-- **Value**: `https://eunbgdzfclupauicnqjx.supabase.co`
-- **Environment**: ☑ Production ☑ Preview ☑ Development
-- Clique em **Save**
-
-### Variável 6: SUPABASE_SERVICE_KEY
-- **Name**: `SUPABASE_SERVICE_KEY`
-- **Value**: `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV1bmJnZHpmY2x1cGF1aWNucWp4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTMzMTg3NCwiZXhwIjoyMDkwOTA3ODc0fQ.VS3eKc0r8O4s3J27TevRwNhX68tpN65C4C_oOWcrH9o`
-- **Environment**: ☑ Production ☑ Preview ☑ Development
-- Clique em **Save**
-
----
-
-## Passo 3: Fazer Redeploy
-
-**IMPORTANTE**: Após adicionar as variáveis, você PRECISA fazer um novo deploy!
-
-### Opção A: Via Vercel Dashboard (mais fácil)
-
-1. Vá para https://vercel.com/ricardos-projects-6af5d6cb/calculadora-pro
-2. Clique na aba **Deployments**
-3. Clique nos 3 pontinhos (...) do deployment mais recente
-4. Clique em **Redeploy**
-5. Clique em **Redeploy** novamente para confirmar
-
-### Opção B: Via terminal
-
-```bash
-cd C:\projetos\calculadora\backend
-vercel --prod
-```
-
----
-
-## Passo 4: Testar se funcionou
-
-Após o redeploy, teste a API diretamente:
-
-1. Abra o navegador
-2. Acesse: https://calculadora-pro-ten.vercel.app/api/check-pro?device_id=test
-3. Deve retornar: `{"is_pro":false}`
-
-Se retornar um JSON, está funcionando! ✅
-
----
-
-## Passo 5: Testar no App
-
-1. Abra o app no celular
-2. Toque no badge de trial
-3. Toque em "Comprar PRO"
-4. Agora deve aparecer o QR Code! 🎉
-
----
-
-## Se ainda der erro...
-
-### Erro: "Cannot find module 'https'"
-
-Significa que a Vercel não reconheceu como função Node.js. 
-
-**Solução**: O arquivo `vercel.json` já foi corrigido no último commit. Faça um redeploy.
-
-### Erro: "Cannot read certificate"
-
-Significa que o arquivo `.p12` não foi enviado para a Vercel.
-
-**Solução**: O arquivo está commitado em `backend/producao-918763-somafacil.p12`. A Vercel vai pegar do Git automaticamente.
-
-### Erro: "401 Unauthorized" da EFI
-
-Significa que Client ID ou Client Secret estão errados.
-
-**Solução**: Verifique se copiou EXATAMENTE as credenciais acima.
-
----
-
-## Credenciais de referência
-
-Se precisar verificar novamente:
+Clique em **Add New** e preencha:
 
 ```
-EFI_CLIENT_ID=f3d9a3e99b4921ca027d5752473d530f0763f46c
-EFI_CLIENT_SECRET=c4a8a472b03a0ee2c30f9bf4a881b3c6ffaa8d55
-EFI_PIX_KEY=rikardomartinssantos@gmail.com
-EFI_CERT_PASSWORD=(vazio)
-SUPABASE_URL=https://eunbgdzfclupauicnqjx.supabase.co
-SUPABASE_SERVICE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV1bmJnZHpmY2x1cGF1aWNucWp4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTMzMTg3NCwiZXhwIjoyMDkwOTA3ODc0fQ.VS3eKc0r8O4s3J27TevRwNhX68tpN65C4C_oOWcrH9o
+Name: PAGARME_API_KEY
+Value: sk_128257d3e216448085a598a7b528feef
 ```
 
+Marque os checkboxes:
+- ✅ Production
+- ✅ Preview
+- ⬜ Development (opcional)
+
+Clique em **Save**
+
+## 4️⃣ Verificar Variáveis Necessárias
+
+Certifique-se que estas variáveis **CONTINUAM CONFIGURADAS**:
+
+```
+✅ SUPABASE_URL=https://eunbgdzfclupauicnqjx.supabase.co
+✅ SUPABASE_SERVICE_KEY=(sua chave do supabase)
+✅ PAGARME_API_KEY=sk_128257d3e216448085a598a7b528feef (acabou de adicionar)
+```
+
+## 5️⃣ Fazer Redeploy
+
+Há 2 opções:
+
+### Opção A: Redeploy Automático (Recomendado)
+A Vercel vai detectar o push no GitHub e fazer deploy automaticamente.
+Aguarde 1-2 minutos.
+
+### Opção B: Redeploy Manual
+1. Vá na aba **Deployments**
+2. Clique nos **3 pontinhos** do último deploy
+3. Clique em **Redeploy**
+4. Confirme **Redeploy**
+
+## 6️⃣ Testar
+
+Após o deploy terminar (veja o status na aba Deployments), abra:
+
+**Teste 1 - Health Check:**
+```
+https://calculadora-pro-ten.vercel.app/api/health
+```
+
+Deve mostrar:
+```json
+{
+  "service": "soma-facil-backend",
+  "ready": true,
+  "configuration": {
+    "pagarme": true,
+    "supabaseUrl": true,
+    "supabaseServiceKey": true
+  }
+}
+```
+
+**Teste 2 - Test Pagar.me:**
+```
+https://calculadora-pro-ten.vercel.app/api/test-pagarme
+```
+
+Deve mostrar:
+```json
+{
+  "test": "SUCCESS",
+  "message": "Pagar.me API key is valid and working"
+}
+```
+
+## 7️⃣ Configurar Webhook
+
+1. Acesse: **https://id.pagar.me/**
+2. Faça login
+3. Vá em **Desenvolvimento** → **Webhooks**
+4. Clique em **Adicionar Webhook** (ou similar)
+5. Cole a URL:
+   ```
+   https://calculadora-pro-ten.vercel.app/api/webhook-pagarme
+   ```
+6. Selecione os eventos:
+   - ✅ `order.paid`
+   - ✅ `charge.paid`
+7. Salve
+
+## ✅ Pronto!
+
+Agora pode testar o fluxo completo no app:
+
+1. Abrir app
+2. Clicar em "Ver Planos"
+3. Clicar em "Comprar acesso vitalício"
+4. QR Code deve aparecer
+5. Pagar R$ 10,00 via app do banco
+6. App deve detectar e liberar PRO automaticamente
+
 ---
 
-## ✅ Checklist
+**🎉 Pagar.me é MUITO mais simples que EFI!**
 
-- [ ] Acessei https://vercel.com/ricardos-projects-6af5d6cb/calculadora-pro/settings/environment-variables
-- [ ] Adicionei as 6 variáveis de ambiente
-- [ ] Marquei Production, Preview e Development em todas
-- [ ] Fiz um Redeploy
-- [ ] Testei https://calculadora-pro-ten.vercel.app/api/check-pro?device_id=test
-- [ ] Testei no app e o QR Code apareceu
+- ✅ Sem certificado .p12
+- ✅ Apenas 1 chave de API
+- ✅ QR Code vem direto na resposta
+- ✅ Webhook simples
 
----
-
-**Qualquer dúvida, me avise! Mas siga EXATAMENTE estes passos primeiro.**
+Se tiver algum erro, me avise que eu te ajudo! 🚀
