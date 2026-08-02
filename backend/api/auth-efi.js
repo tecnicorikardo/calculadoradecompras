@@ -50,6 +50,7 @@ async function getEfiToken() {
   const credentials = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
 
   return new Promise((resolve, reject) => {
+    const certPassword = process.env.EFI_CERT_PASSWORD;
     const options = {
       hostname: 'api-pix.gerencianet.com.br',
       port: 443,
@@ -60,8 +61,12 @@ async function getEfiToken() {
         'Content-Type': 'application/json',
       },
       pfx: cert,
-      passphrase: process.env.EFI_CERT_PASSWORD || '',
     };
+
+    // Só adiciona passphrase se realmente tiver valor
+    if (certPassword && certPassword !== '') {
+      options.passphrase = certPassword;
+    }
 
     const req = https.request(options, (res) => {
       let data = '';
