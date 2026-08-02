@@ -1,4 +1,5 @@
 const fs = require('fs');
+const path = require('path');
 const https = require('https');
 
 let cachedToken = null;
@@ -12,10 +13,38 @@ async function getEfiToken() {
 
   const clientId = process.env.EFI_CLIENT_ID;
   const clientSecret = process.env.EFI_CLIENT_SECRET;
-  const certPath = process.env.EFI_CERT_PATH || './producao-918763-somafacil.p12';
+  const certFilename = process.env.EFI_CERT_PATH || 'producao-918763-somafacil.p12';
+  
+  // Tenta vários caminhos possíveis para o certificado
+  const possiblePaths = [
+    certFilename,
+    path.join(process.cwd(), certFilename),
+    path.join(__dirname, '..', certFilename),
+    path.join('/var/task', certFilename),
+  ];
+
+  let cert;
+  let certPath;
+  
+  for (const tryPath of possiblePaths) {
+    try {
+      if (fs.existsSync(tryPath)) {
+        cert = fs.readFileSync(tryPath);
+        certPath = tryPath;
+        break;
+      }
+    } catch (e) {
+      // Continua tentando outros caminhos
+    }
+  }
+
+  if (!cert) {
+    throw new Error(`Certificate not found. Tried paths: ${possiblePaths.join(', ')}`);
+  }
+
+  console.log(`Using certificate from: ${certPath}`);
   
   const credentials = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
-  const cert = fs.readFileSync(certPath);
 
   return new Promise((resolve, reject) => {
     const options = {
