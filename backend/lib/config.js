@@ -42,7 +42,7 @@ function getBackendUrl(environment = process.env) {
 
 function getConfigurationStatus(environment = process.env) {
   return {
-    pagarme: isConfigured(environment.PAGARME_API_KEY),
+    mercadopago: isConfigured(environment.MERCADOPAGO_ACCESS_TOKEN),
     supabaseUrl: isConfigured(environment.SUPABASE_URL),
     supabaseServiceKey: isConfigured(environment.SUPABASE_SERVICE_KEY),
   };
