@@ -37,6 +37,10 @@ module.exports = async (req, res) => {
         email: `${device_id.substring(0, 12)}@somafacil.app`,
         first_name: 'Cliente',
         last_name: device_id.substring(0, 8),
+        identification: {
+          type: 'CPF',
+          number: '00000000000'
+        }
       },
       external_reference: device_id, // device_id para o webhook
       notification_url: `${process.env.BACKEND_URL || 'https://calculadora-pro-ten.vercel.app'}/api/webhook-mercadopago`,

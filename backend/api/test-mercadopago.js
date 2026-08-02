@@ -31,6 +31,10 @@ module.exports = async (req, res) => {
         email: 'teste@somafacil.app',
         first_name: 'Cliente',
         last_name: 'Teste',
+        identification: {
+          type: 'CPF',
+          number: '00000000000'
+        }
       },
       external_reference: 'test_device_123',
     });
