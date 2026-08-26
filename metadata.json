@@ -1,0 +1,8 @@
+{
+  "name": "Soma Fácil",
+  "description": "Calculadora de compras inteligente com controle de orçamento, catálogo de itens, teclado numérico rápido e modo PRO.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

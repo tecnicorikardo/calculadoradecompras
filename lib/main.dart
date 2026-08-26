@@ -1,10 +1,29 @@
 import 'package:flutter/material.dart';
 
-import 'app.dart';
-import 'controllers/pro_controller.dart';
+void main() {
+  runApp(const SomaFacilApp());
+}
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await ProController.instance.initialize();
-  runApp(const QuickSumApp());
+class SomaFacilApp extends StatelessWidget {
+  const SomaFacilApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Soma Fácil',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFFFF4D57),
+          brightness: Brightness.light,
+        ),
+        useMaterial3: true,
+      ),
+      home: const Scaffold(
+        body: Center(
+          child: Text('Soma Fácil Web'),
+        ),
+      ),
+    );
+  }
 }
