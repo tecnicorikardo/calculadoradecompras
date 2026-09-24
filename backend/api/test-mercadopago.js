@@ -60,10 +60,18 @@ module.exports = async (req, res) => {
               status: response.statusCode, 
               paymentId: payment.id,
               paymentStatus: payment.status,
+              statusDetail: payment.status_detail,
               qrCodeGenerated: !!payment.point_of_interaction?.transaction_data?.qr_code,
+              // Campos extras para diagnóstico
+              callbackUrl: payment.notification_url,
+              operationType: payment.operation_type,
+              collectorId: payment.collector_id,
+              errorCodes: payment.error_codes || null,
             });
           } else {
-            reject(new Error(`Mercado Pago API error: ${response.statusCode} - ${data}`));
+            let errorBody = {};
+            try { errorBody = JSON.parse(data); } catch {}
+            reject(new Error(`Mercado Pago API error: ${response.statusCode} - ${JSON.stringify(errorBody)}`));
           }
         });
       });
