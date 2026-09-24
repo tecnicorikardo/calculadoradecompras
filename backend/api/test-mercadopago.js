@@ -57,21 +57,30 @@ module.exports = async (req, res) => {
             const payment = JSON.parse(data);
             resolve({ 
               success: true, 
-              status: response.statusCode, 
+              httpStatus: response.statusCode, 
+              // Campos de diagnóstico diretos
               paymentId: payment.id,
               paymentStatus: payment.status,
               statusDetail: payment.status_detail,
               qrCodeGenerated: !!payment.point_of_interaction?.transaction_data?.qr_code,
-              // Campos extras para diagnóstico
-              callbackUrl: payment.notification_url,
-              operationType: payment.operation_type,
-              collectorId: payment.collector_id,
-              errorCodes: payment.error_codes || null,
+              // Payload bruto completo do Mercado Pago para diagnóstico
+              raw: {
+                status: payment.status,
+                status_detail: payment.status_detail,
+                operation_type: payment.operation_type,
+                payment_method_id: payment.payment_method_id,
+                payment_type_id: payment.payment_type_id,
+                error_codes: payment.error_codes,
+                description: payment.description,
+                collector_id: payment.collector_id,
+                payer: payment.payer,
+                point_of_interaction: payment.point_of_interaction,
+              },
             });
           } else {
             let errorBody = {};
             try { errorBody = JSON.parse(data); } catch {}
-            reject(new Error(`Mercado Pago API error: ${response.statusCode} - ${JSON.stringify(errorBody)}`));
+            reject(new Error(`MP API error ${response.statusCode}: ${JSON.stringify(errorBody)}`));
           }
         });
       });
