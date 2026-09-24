@@ -28,13 +28,9 @@ module.exports = async (req, res) => {
       description: 'Soma Facil PRO - Teste',
       payment_method_id: 'pix',
       payer: {
-        email: 'teste@somafacil.app',
+        email: 'cliente@gmail.com',
         first_name: 'Cliente',
-        last_name: 'Teste',
-        identification: {
-          type: 'CPF',
-          number: '00000000000'
-        }
+        last_name: 'SomaFacil',
       },
       external_reference: 'test_device_123',
     });
