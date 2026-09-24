@@ -19,7 +19,7 @@ Clique em **Add New** e preencha:
 
 ```
 Name: MERCADOPAGO_ACCESS_TOKEN
-Value: APP_USR-8124126164184368-040416-3c7856b4ccbdd285ce9fd54d6480ea2a-466908277
+Value: <cole aqui seu Access Token do painel do Mercado Pago>
 ```
 
 Marque os checkboxes:

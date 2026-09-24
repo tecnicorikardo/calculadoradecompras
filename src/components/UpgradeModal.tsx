@@ -33,6 +33,7 @@ export const UpgradeModal: React.FC<UpgradeModalProps> = ({
   const [copiedPix, setCopiedPix] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [verifyError, setVerifyError] = useState(false);
 
   const loadPix = useCallback(async () => {
     setLoadingPix(true);
@@ -65,26 +66,35 @@ export const UpgradeModal: React.FC<UpgradeModalProps> = ({
     }
   };
 
-  const handleVerifyOrActivate = () => {
+  const handleVerifyOrActivate = async () => {
+    if (!pixData?.txid) return;
     setVerifying(true);
-    setTimeout(() => {
-      proService.activatePro();
-      setIsSuccess(true);
-      setVerifying(false);
-      try {
-        confetti({
-          particleCount: 100,
-          spread: 70,
-          origin: { y: 0.6 },
-        });
-      } catch {
-        // Ignored
+    setVerifyError(false);
+    try {
+      const paid = await proService.checkPaymentStatus(pixData.txid);
+      if (paid) {
+        setIsSuccess(true);
+        try {
+          confetti({
+            particleCount: 100,
+            spread: 70,
+            origin: { y: 0.6 },
+          });
+        } catch {
+          // Ignored
+        }
+        setTimeout(() => {
+          onActivated();
+          onClose();
+        }, 2000);
+      } else {
+        setVerifyError(true);
       }
-      setTimeout(() => {
-        onActivated();
-        onClose();
-      }, 2000);
-    }, 1200);
+    } catch {
+      setVerifyError(true);
+    } finally {
+      setVerifying(false);
+    }
   };
 
   return (
@@ -212,8 +222,8 @@ export const UpgradeModal: React.FC<UpgradeModalProps> = ({
                 <button
                   type="button"
                   onClick={handleVerifyOrActivate}
-                  disabled={verifying}
-                  className="w-full py-3.5 px-4 rounded-xl bg-[#FF4D57] hover:bg-[#FF2F38] text-white font-black text-sm flex items-center justify-center gap-2 shadow-[0_6px_20px_rgba(255,77,87,0.35)] active:scale-98 transition-all cursor-pointer"
+                  disabled={verifying || !pixData}
+                  className="w-full py-3.5 px-4 rounded-xl bg-[#FF4D57] hover:bg-[#FF2F38] text-white font-black text-sm flex items-center justify-center gap-2 shadow-[0_6px_20px_rgba(255,77,87,0.35)] active:scale-98 transition-all cursor-pointer disabled:opacity-60"
                 >
                   {verifying ? (
                     <>
@@ -227,6 +237,12 @@ export const UpgradeModal: React.FC<UpgradeModalProps> = ({
                     </>
                   )}
                 </button>
+
+                {verifyError && (
+                  <p className="text-xs text-center text-amber-600 dark:text-amber-400 font-medium">
+                    Pagamento ainda não confirmado. Aguarde alguns segundos e tente novamente.
+                  </p>
+                )}
               </>
             )}
           </div>

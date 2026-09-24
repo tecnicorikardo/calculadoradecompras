@@ -8,7 +8,7 @@
   - `/api/webhook-mercadopago` - Recebe confirmação
   - `/api/test-mercadopago` - Testa conexão
 - ✅ **Código no GitHub** (já foi o push)
-- ✅ **Access Token** obtido: `APP_USR-8124126164184368-040416-3c7856b4ccbdd285ce9fd54d6480ea2a-466908277`
+- ✅ **Access Token** obtido: `APP_USR-xxxx...` *(configure como variável de ambiente na Vercel — não coloque o token aqui!)*
 
 ## ⚠️ O que FALTA fazer
 
