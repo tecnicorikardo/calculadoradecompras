@@ -2,75 +2,90 @@ const { createClient } = require('@supabase/supabase-js');
 const https = require('https');
 
 module.exports = async (req, res) => {
+  // Mercado Pago sempre deve receber 200, senão fica retentando
+  // Erros internos são logados mas não devolvem 500
+
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
-    const { action, data, type } = req.body;
+    const { action, data, type } = req.body || {};
 
-    console.log('Mercado Pago Webhook received:', { action, type, id: data?.id });
+    console.log('MP Webhook received:', JSON.stringify({ action, type, id: data?.id }));
 
-    // Mercado Pago envia notificação quando o pagamento é atualizado
-    // action: "payment.updated" e type: "payment"
-    if (type === 'payment' && data?.id) {
-      const paymentId = data.id;
-
-      // Buscar detalhes do pagamento
-      const accessToken = process.env.MERCADOPAGO_ACCESS_TOKEN;
-      if (!accessToken) {
-        throw new Error('MERCADOPAGO_ACCESS_TOKEN not configured');
-      }
-
-      const payment = await getPaymentDetails(paymentId, accessToken);
-
-      // Só processa se o pagamento foi aprovado
-      if (payment.status === 'approved') {
-        const deviceId = payment.external_reference;
-
-        if (!deviceId) {
-          console.log('Payment without external_reference, ignoring');
-          return res.status(200).json({ received: true });
-        }
-
-        const supabaseUrl = process.env.SUPABASE_URL;
-        const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY;
-
-        if (!supabaseUrl || !supabaseServiceKey) {
-          throw new Error('Supabase not configured');
-        }
-
-        const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-        // Ativa PRO para o device_id
-        const { error } = await supabase
-          .from('pro_users')
-          .upsert({ 
-            device_id: deviceId,
-            activated_at: new Date().toISOString(),
-          }, { 
-            onConflict: 'device_id' 
-          });
-
-        if (error) {
-          console.error('Error saving to Supabase:', error);
-          return res.status(500).json({ error: 'Database error' });
-        }
-
-        console.log(`PRO activated for device: ${deviceId}`);
-        return res.status(200).json({ success: true, device_id: deviceId });
-      }
+    // Ignora eventos que não são de pagamento
+    if (type !== 'payment' || !data?.id) {
+      console.log('Non-payment event, ignoring:', type);
+      return res.status(200).json({ received: true, ignored: true });
     }
 
-    // Outros eventos ou status
-    return res.status(200).json({ received: true });
+    const paymentId = data.id;
+
+    const accessToken = process.env.MERCADOPAGO_ACCESS_TOKEN;
+    if (!accessToken) {
+      console.error('MERCADOPAGO_ACCESS_TOKEN not configured');
+      // Retorna 200 para MP não ficar retentando — problema é de configuração
+      return res.status(200).json({ received: true, warning: 'token not configured' });
+    }
+
+    // Buscar detalhes do pagamento no Mercado Pago
+    let payment;
+    try {
+      payment = await getPaymentDetails(paymentId, accessToken);
+    } catch (err) {
+      // Pagamento não encontrado (ex: ID de teste "123456") — não é erro crítico
+      console.warn(`Payment ${paymentId} not found or MP error:`, err.message);
+      return res.status(200).json({ received: true, warning: `payment lookup failed: ${err.message}` });
+    }
+
+    console.log(`Payment ${paymentId} status: ${payment.status} / detail: ${payment.status_detail}`);
+
+    // Só ativa PRO se o pagamento foi aprovado
+    if (payment.status !== 'approved') {
+      return res.status(200).json({ received: true, payment_status: payment.status });
+    }
+
+    const deviceId = payment.external_reference;
+    if (!deviceId) {
+      console.warn('Approved payment without external_reference, ignoring');
+      return res.status(200).json({ received: true, warning: 'no external_reference' });
+    }
+
+    // Salvar no Supabase
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY;
+
+    if (!supabaseUrl || !supabaseServiceKey) {
+      console.error('Supabase not configured — cannot activate PRO for device:', deviceId);
+      // Retorna 500 aqui para o MP retentar depois que Supabase for configurado
+      return res.status(500).json({ error: 'Database not configured' });
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    const { error } = await supabase
+      .from('pro_users')
+      .upsert(
+        { device_id: deviceId, activated_at: new Date().toISOString() },
+        { onConflict: 'device_id' }
+      );
+
+    if (error) {
+      console.error('Supabase upsert error:', error);
+      return res.status(500).json({ error: 'Database error' });
+    }
+
+    console.log(`✅ PRO activated for device: ${deviceId} (payment: ${paymentId})`);
+    return res.status(200).json({ success: true, device_id: deviceId });
+
   } catch (err) {
-    console.error('Webhook processing error:', err);
-    return res.status(500).json({ error: err.message });
+    console.error('Webhook unexpected error:', err);
+    return res.status(200).json({ received: true, warning: err.message });
   }
 };
 
-async function getPaymentDetails(paymentId, accessToken) {
+function getPaymentDetails(paymentId, accessToken) {
   return new Promise((resolve, reject) => {
     const options = {
       hostname: 'api.mercadopago.com',
@@ -78,19 +93,19 @@ async function getPaymentDetails(paymentId, accessToken) {
       path: `/v1/payments/${paymentId}`,
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${accessToken}`,
+        Authorization: `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
       },
     };
 
-    const req = https.request(options, (res) => {
+    const req = https.request(options, (response) => {
       let data = '';
-      res.on('data', (chunk) => data += chunk);
-      res.on('end', () => {
-        if (res.statusCode >= 200 && res.statusCode < 300) {
+      response.on('data', (chunk) => (data += chunk));
+      response.on('end', () => {
+        if (response.statusCode >= 200 && response.statusCode < 300) {
           resolve(JSON.parse(data));
         } else {
-          reject(new Error(`Mercado Pago API error: ${res.statusCode} - ${data}`));
+          reject(new Error(`MP API ${response.statusCode}: ${data}`));
         }
       });
     });
