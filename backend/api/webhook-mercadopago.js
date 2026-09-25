@@ -2,17 +2,28 @@ const { createClient } = require('@supabase/supabase-js');
 const https = require('https');
 
 module.exports = async (req, res) => {
-  // Mercado Pago sempre deve receber 200, senão fica retentando
-  // Erros internos são logados mas não devolvem 500
-
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  // Garante sempre 200 no topo — Mercado Pago não deve retentar por erro interno
   try {
-    const { action, data, type } = req.body || {};
+    // Suporte a body como string (alguns proxies não fazem auto-parse)
+    let body = req.body;
+    if (typeof body === 'string') {
+      try { body = JSON.parse(body); } catch { body = {}; }
+    }
+    body = body || {};
 
-    console.log('MP Webhook received:', JSON.stringify({ action, type, id: data?.id }));
+    const { action, data, type, live_mode } = body;
+
+    console.log('MP Webhook received:', JSON.stringify({ action, type, live_mode, id: data?.id }));
+
+    // ✅ Modo de teste do painel do MP (live_mode: false) — ignorar silenciosamente
+    if (live_mode === false) {
+      console.log('Test notification (live_mode: false), ignoring safely');
+      return res.status(200).json({ received: true, mode: 'test' });
+    }
 
     // Ignora eventos que não são de pagamento
     if (type !== 'payment' || !data?.id) {
@@ -25,7 +36,6 @@ module.exports = async (req, res) => {
     const accessToken = process.env.MERCADOPAGO_ACCESS_TOKEN;
     if (!accessToken) {
       console.error('MERCADOPAGO_ACCESS_TOKEN not configured');
-      // Retorna 200 para MP não ficar retentando — problema é de configuração
       return res.status(200).json({ received: true, warning: 'token not configured' });
     }
 
@@ -34,14 +44,13 @@ module.exports = async (req, res) => {
     try {
       payment = await getPaymentDetails(paymentId, accessToken);
     } catch (err) {
-      // Pagamento não encontrado (ex: ID de teste "123456") — não é erro crítico
-      console.warn(`Payment ${paymentId} not found or MP error:`, err.message);
-      return res.status(200).json({ received: true, warning: `payment lookup failed: ${err.message}` });
+      console.warn(`Payment ${paymentId} lookup failed:`, err.message);
+      return res.status(200).json({ received: true, warning: `lookup failed: ${err.message}` });
     }
 
-    console.log(`Payment ${paymentId} status: ${payment.status} / detail: ${payment.status_detail}`);
+    console.log(`Payment ${paymentId}: status=${payment.status} detail=${payment.status_detail}`);
 
-    // Só ativa PRO se o pagamento foi aprovado
+    // Só ativa PRO se aprovado
     if (payment.status !== 'approved') {
       return res.status(200).json({ received: true, payment_status: payment.status });
     }
@@ -58,7 +67,6 @@ module.exports = async (req, res) => {
 
     if (!supabaseUrl || !supabaseServiceKey) {
       console.error('Supabase not configured — cannot activate PRO for device:', deviceId);
-      // Retorna 500 aqui para o MP retentar depois que Supabase for configurado
       return res.status(500).json({ error: 'Database not configured' });
     }
 
@@ -80,8 +88,9 @@ module.exports = async (req, res) => {
     return res.status(200).json({ success: true, device_id: deviceId });
 
   } catch (err) {
-    console.error('Webhook unexpected error:', err);
-    return res.status(200).json({ received: true, warning: err.message });
+    // Segurança final — nunca deixar o MP sem resposta 200 por erro inesperado
+    console.error('Webhook unexpected error:', err.message);
+    return res.status(200).json({ received: true, warning: 'unexpected error handled' });
   }
 };
 
