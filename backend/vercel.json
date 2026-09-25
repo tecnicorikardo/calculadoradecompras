@@ -1,14 +1,9 @@
 {
   "version": 2,
-  "functions": {
-    "api/**/*.js": {
-      "runtime": "nodejs20.x"
-    }
-  },
-  "routes": [
+  "crons": [
     {
-      "src": "/api/(.*)",
-      "dest": "/api/$1"
+      "path": "/api/keep-alive",
+      "schedule": "0 10 * * *"
     }
   ]
 }

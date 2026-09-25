@@ -1,12 +1,6 @@
 {
-  "version": 2,
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "functions": {
-    "backend/api/**/*.js": {
-      "runtime": "nodejs20.x"
-    }
-  },
   "crons": [
     {
       "path": "/api/keep-alive",
@@ -14,7 +8,9 @@
     }
   ],
   "rewrites": [
-    { "source": "/api/:path*", "destination": "/backend/api/:path*" },
-    { "source": "/((?!api).*)", "destination": "/index.html" }
+    {
+      "source": "/((?!api/).*)",
+      "destination": "/index.html"
+    }
   ]
 }
