@@ -4,17 +4,20 @@ import { proService } from '../services/proService';
 
 export function usePro() {
   const [proState, setProState] = useState<ProState>(() => proService.getProState());
+  const [isProLoading, setIsProLoading] = useState(true);
 
   const refresh = useCallback(() => {
     setProState(proService.getProState());
   }, []);
 
   useEffect(() => {
-    // Initial check
+    // Initial check from localStorage
     refresh();
-    // Check remote status in background
+    // Check remote status — só mostra PaywallGate depois que isso terminar
     proService.checkRemoteProStatus().then(() => {
       refresh();
+    }).finally(() => {
+      setIsProLoading(false);
     });
   }, [refresh]);
 
@@ -35,6 +38,7 @@ export function usePro() {
 
   return {
     ...proState,
+    isProLoading,
     refresh,
     activatePro,
     resetTrial,

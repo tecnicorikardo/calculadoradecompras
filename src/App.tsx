@@ -118,7 +118,7 @@ export const App: React.FC = () => {
     setDescription(item);
   }, []);
 
-  if (isLoading) {
+  if (isLoading || pro.isProLoading) {
     return (
       <div className="min-h-screen min-h-[100dvh] flex items-center justify-center bg-[#FFFCF8] dark:bg-[#0E1118]">
         <div className="w-8 h-8 rounded-full border-3 border-[#FF4D57] border-t-transparent animate-spin" />
