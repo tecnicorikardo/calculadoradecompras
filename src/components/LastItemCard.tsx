@@ -1,4 +1,5 @@
 import React from 'react';
+import { Tag } from 'lucide-react';
 import { ShoppingItem, GroupedItem } from '../types';
 import { CurrencyFormatters } from '../core/utils/currencyFormatters';
 
@@ -24,58 +25,73 @@ export const LastItemCard: React.FC<LastItemCardProps> = ({
 
   const quantity = lastGroup?.quantity ?? 1;
   const rawDescription = lastItem
-    ? lastItem.description?.trim() || 'Item'
-    : 'Nenhum item adicionado';
+    ? lastItem.description?.trim() || 'Item sem descrição'
+    : null;
 
   const description = lastItem && quantity > 1
-    ? `${quantity}x ${rawDescription}`
+    ? `${quantity}× ${rawDescription}`
     : rawDescription;
 
-  const unitFormatted = lastItem ? CurrencyFormatters.formatBRL(lastItem.value) : 'R$ 0,00';
+  const unitFormatted = lastItem ? CurrencyFormatters.formatBRL(lastItem.value) : '';
   const totalFormatted = lastItem
     ? CurrencyFormatters.formatBRL(lastItem.value * quantity)
-    : 'R$ 0,00';
-
-  const valueDisplay = !lastItem
-    ? 'R$ 0,00'
-    : quantity > 1
-    ? `${quantity} x ${unitFormatted} = ${totalFormatted}`
-    : unitFormatted;
+    : '';
 
   return (
     <div
-      className={`w-full rounded-2xl bg-[#FFFEFD] dark:bg-[#1B2230] border border-[#E9DADF] dark:border-[#2B3547] shadow-sm transition-all duration-200 flex flex-col justify-between ${
-        condensed ? 'p-2.5 sm:p-3' : 'p-3 sm:p-4'
+      className={`w-full rounded-2xl bg-[#FFFEFD] dark:bg-[#1B2230] border border-[#E9DADF] dark:border-[#2B3547] shadow-sm transition-all duration-200 ${
+        condensed ? 'p-2.5 sm:p-3' : 'p-3.5 sm:p-4'
       }`}
     >
-      <div className="flex items-center justify-between w-full">
-        <span className="text-[11px] sm:text-xs font-semibold text-[#737B88] dark:text-[#A6B0C1]">
-          Último Item
-        </span>
+      {/* Header label */}
+      <div className="flex items-center justify-between mb-1.5">
+        <div className="flex items-center gap-1.5">
+          <Tag className="w-3.5 h-3.5 text-[#A6B0C1] dark:text-[#737B88]" />
+          <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-[#737B88] dark:text-[#A6B0C1]">
+            Último item
+          </span>
+        </div>
         {lastItem && quantity > 1 && (
-          <span className="text-[10px] sm:text-xs font-bold px-1.5 py-0.5 rounded-full bg-[#FFECEE] dark:bg-[#342129] text-[#FF4D57] dark:text-[#FF737A]">
+          <span className="text-[10px] sm:text-xs font-bold px-2 py-0.5 rounded-full bg-[#FFECEE] dark:bg-[#342129] text-[#FF4D57] dark:text-[#FF737A]">
             {quantity} un.
           </span>
         )}
       </div>
 
-      <div className="my-0.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 overflow-hidden">
-        <span
-          className={`font-bold truncate text-[#243041] dark:text-[#F3F6FC] ${
-            !lastItem ? 'text-[#737B88] dark:text-[#A6B0C1] font-normal italic' : ''
-          } ${condensed ? 'text-xs sm:text-sm' : 'text-sm sm:text-base'}`}
-        >
-          {description}
-        </span>
+      {/* Content */}
+      {!lastItem ? (
+        /* Empty state */
+        <p className="text-sm text-[#A6B0C1] dark:text-[#737B88] italic">
+          Nenhum item adicionado ainda
+        </p>
+      ) : (
+        <div className="flex items-center justify-between gap-2">
+          {/* Description — wraps in 2 lines máx */}
+          <span
+            className={`font-semibold text-[#243041] dark:text-[#F3F6FC] leading-tight line-clamp-2 flex-1 ${
+              condensed ? 'text-xs sm:text-sm' : 'text-sm sm:text-base'
+            }`}
+          >
+            {description}
+          </span>
 
-        <span
-          className={`font-black text-right shrink-0 text-[#FF2F38] dark:text-[#FF737A] ${
-            !lastItem ? 'text-[#737B88] dark:text-[#A6B0C1]' : ''
-          } ${condensed ? 'text-base sm:text-lg' : 'text-lg sm:text-xl'}`}
-        >
-          {valueDisplay}
-        </span>
-      </div>
+          {/* Value */}
+          <div className="flex flex-col items-end shrink-0">
+            <span
+              className={`font-black text-[#FF2F38] dark:text-[#FF737A] ${
+                condensed ? 'text-base sm:text-lg' : 'text-lg sm:text-xl'
+              }`}
+            >
+              {quantity > 1 ? totalFormatted : unitFormatted}
+            </span>
+            {quantity > 1 && (
+              <span className="text-[10px] text-[#A6B0C1] dark:text-[#737B88] font-medium">
+                {unitFormatted} cada
+              </span>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

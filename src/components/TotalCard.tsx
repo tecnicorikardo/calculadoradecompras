@@ -1,5 +1,5 @@
 import React from 'react';
-import { AlertCircle, AlertTriangle } from 'lucide-react';
+import { AlertCircle, AlertTriangle, TrendingUp } from 'lucide-react';
 import { CurrencyFormatters } from '../core/utils/currencyFormatters';
 import { BudgetStatus } from '../types';
 
@@ -36,21 +36,22 @@ export const TotalCard: React.FC<TotalCardProps> = ({
 
   const cardBorderClass = isAlert
     ? isLimitReached
-      ? 'border-[#FF2F38] dark:border-[#FF737A] shadow-[0_0_20px_rgba(255,47,56,0.22)]'
-      : 'border-[#FFC857] dark:border-[#FFC95E] shadow-[0_0_16px_rgba(255,200,87,0.2)]'
+      ? 'border-[#FF2F38] dark:border-[#FF737A] shadow-[0_0_24px_rgba(255,47,56,0.25)]'
+      : 'border-[#FFC857] dark:border-[#FFC95E] shadow-[0_0_20px_rgba(255,200,87,0.22)]'
     : 'border-[#E9DADF] dark:border-[#2B3547] shadow-sm';
 
   return (
     <div
       className={`w-full rounded-2xl bg-[#FFFEFD] dark:bg-[#1B2230] border transition-all duration-300 flex flex-col items-center justify-center ${cardBorderClass} ${
-        condensed ? 'p-2.5 sm:p-3' : 'p-3 sm:p-4'
+        condensed ? 'py-2.5 px-3' : 'py-4 px-4 sm:py-5'
       }`}
     >
-      <div className="flex items-center gap-2">
-        <span className="text-xs sm:text-sm font-bold uppercase tracking-wider text-[#737B88] dark:text-[#A6B0C1]">
-          Total
+      {/* Label row */}
+      <div className="flex items-center gap-2 mb-1">
+        <TrendingUp className="w-3.5 h-3.5 text-[#A6B0C1] dark:text-[#737B88]" />
+        <span className="text-[11px] sm:text-xs font-bold uppercase tracking-widest text-[#737B88] dark:text-[#A6B0C1]">
+          Total da compra
         </span>
-
         {isAlert && (
           <div
             className={`flex items-center gap-1 px-2 py-0.5 rounded-full border text-[10px] sm:text-xs font-bold animate-alert-pulse ${alertBadgeBg}`}
@@ -65,32 +66,34 @@ export const TotalCard: React.FC<TotalCardProps> = ({
         )}
       </div>
 
-      <div className="flex items-center justify-center gap-2 my-1 overflow-hidden max-w-full">
+      {/* Value */}
+      <div className="flex items-center justify-center gap-2 overflow-hidden max-w-full">
         {isAlert && !condensed && (
-          <AlertTriangle className={`w-6 h-6 sm:w-8 sm:h-8 shrink-0 ${alertColor} animate-pulse`} />
+          <AlertTriangle className={`w-6 h-6 sm:w-7 sm:h-7 shrink-0 ${alertColor} animate-pulse`} />
         )}
         <span
           className={`font-black tracking-tight truncate text-[#FF2F38] dark:text-[#FF737A] transition-colors ${
             condensed
               ? 'text-2xl sm:text-3xl'
-              : 'text-3xl sm:text-5xl md:text-6xl'
+              : 'text-4xl sm:text-5xl md:text-6xl'
           }`}
           style={{
             textShadow: isLimitReached
-              ? '0 0 24px rgba(255, 47, 56, 0.35)'
-              : '0 0 16px rgba(255, 77, 87, 0.2)',
+              ? '0 0 28px rgba(255, 47, 56, 0.4)'
+              : '0 0 20px rgba(255, 77, 87, 0.25)',
           }}
         >
           {CurrencyFormatters.formatBRL(total)}
         </span>
       </div>
 
-      {budgetLimit !== null && (
-        <div className="text-[11px] sm:text-xs font-semibold text-[#737B88] dark:text-[#A6B0C1]">
+      {/* Budget info */}
+      {budgetLimit !== null && !condensed && (
+        <div className="mt-1.5 text-[11px] sm:text-xs font-semibold text-[#737B88] dark:text-[#A6B0C1]">
           Limite: <span className="font-bold">{CurrencyFormatters.formatBRL(budgetLimit)}</span>
           {total < budgetLimit && (
-            <span className="ml-1 text-emerald-600 dark:text-emerald-400">
-              (Resta {CurrencyFormatters.formatBRL(budgetLimit - total)})
+            <span className="ml-1.5 text-emerald-600 dark:text-emerald-400 font-bold">
+              · Resta {CurrencyFormatters.formatBRL(budgetLimit - total)}
             </span>
           )}
         </div>
